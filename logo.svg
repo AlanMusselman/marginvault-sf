@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 96" width="420" height="96" role="img" aria-label="MarginVault AI San Francisco Logo">
+  <defs>
+    <linearGradient id="mvShieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="55%" stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="mvAccentGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#34d399"/>
+    </linearGradient>
+    <filter id="mvShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <!-- Shield / Vault Hexagon Icon -->
+  <g transform="translate(10, 8)" filter="url(#mvShadow)">
+    <path d="M40 4 L74 18 L74 48 C74 66 59 77 40 82 C21 77 6 66 6 48 L6 18 Z"
+          fill="url(#mvShieldGrad)" stroke="#10b981" stroke-width="2.5"/>
+    <!-- Inner Vault Ring -->
+    <circle cx="40" cy="43" r="22" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <!-- Ascending Profit Bars + M/V Monogram Checkmark -->
+    <rect x="24" y="46" width="6" height="14" rx="2" fill="#94a3b8"/>
+    <rect x="33" y="38" width="6" height="22" rx="2" fill="#38bdf8"/>
+    <rect x="42" y="29" width="6" height="31" rx="2" fill="url(#mvAccentGrad)"/>
+    <path d="M22 39 L34 27 L43 34 L57 19" fill="none" stroke="#34d399" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <polygon points="57,19 49,19 57,27" fill="#34d399"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(98, 0)">
+    <text x="0" y="48" font-family="'Segoe UI', Inter, Roboto, Helvetica, sans-serif" font-size="32" font-weight="800" fill="#0f172a" letter-spacing="-0.8">
+      Margin<tspan fill="#059669">Vault</tspan>
+    </text>
+    <rect x="200" y="24" width="38" height="22" rx="5" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5"/>
+    <text x="209" y="40" font-family="'Segoe UI', Inter, Roboto, sans-serif" font-size="13" font-weight="800" fill="#059669">AI</text>
+    <text x="2" y="70" font-family="'Segoe UI', Inter, Roboto, Helvetica, sans-serif" font-size="11.5" font-weight="600" fill="#475569" letter-spacing="1.6">
+      SAN FRANCISCO &bull; PROFIT &amp; BACK-OFFICE PARTNER
+    </text>
+  </g>
+</svg>

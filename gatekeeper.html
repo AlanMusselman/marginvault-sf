@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MarginVault GateKeeper™ | 3:00 AM NightDrop QR & Smart Door Access</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fjalla+One&family=JetBrains+Mono:wght@400;600;700&family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0B0E17;
+      --bg-card: #131826;
+      --bg-elevated: #1A2134;
+      --indigo-primary: #7077CF;
+      --indigo-hover: #6068C4;
+      --indigo-deep: #232A68;
+      --emerald: #10B981;
+      --emerald-glow: rgba(16, 185, 129, 0.22);
+      --amber: #F59E0B;
+      --crimson: #EF4444;
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --border-subtle: rgba(142, 147, 218, 0.22);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-main);
+      line-height: 1.55;
+      overflow-x: hidden;
+    }
+    h1, h2, h3, .display-font {
+      font-family: 'Fjalla One', sans-serif;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* Top Nav */
+    .topbar {
+      background: #161616;
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 14px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: #fff;
+    }
+    .brand-badge {
+      background: linear-gradient(135deg, #7077CF, #232A68);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-family: 'Fjalla One', sans-serif;
+      font-size: 1.15rem;
+      letter-spacing: 0.06em;
+    }
+    .nav-links {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 8px 14px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: #fff;
+      background: rgba(112, 119, 207, 0.18);
+    }
+    .btn-primary {
+      background: var(--indigo-primary);
+      color: #fff !important;
+      font-family: 'Fjalla One', sans-serif;
+      letter-spacing: 0.05em;
+      padding: 10px 18px !important;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-primary:hover { background: var(--indigo-hover); transform: translateY(-1px); }
+
+    /* Hero */
+    .hero {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 48px 24px 32px;
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 36px;
+      align-items: center;
+    }
+    @media (max-width: 960px) {
+      .hero { grid-template-columns: 1fr; }
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.14);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34D399;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 4vw, 3.4rem);
+      line-height: 1.1;
+      margin-bottom: 18px;
+    }
+    .hero h1 span { color: var(--indigo-primary); }
+    .hero p.lead {
+      font-size: 1.12rem;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      max-width: 640px;
+    }
+
+    /* Strategic Fit Banner */
+    .strategy-box {
+      background: linear-gradient(135deg, rgba(35, 42, 104, 0.55), rgba(19, 24, 38, 0.9));
+      border: 1px solid var(--indigo-primary);
+      border-radius: 12px;
+      padding: 20px 22px;
+      margin-bottom: 24px;
+    }
+    .strategy-box h3 {
+      font-size: 1.15rem;
+      color: #A5B4FC;
+      margin-bottom: 8px;
+    }
+    .strategy-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 12px;
+    }
+    @media (max-width: 640px) {
+      .strategy-grid { grid-template-columns: 1fr; }
+    }
+    .strategy-pill {
+      background: rgba(11, 14, 23, 0.7);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 0.88rem;
+    }
+    .strategy-pill strong {
+      display: block;
+      color: #fff;
+      margin-bottom: 4px;
+      font-size: 0.94rem;
+    }
+
+    /* Interactive 3 AM Door Simulator */
+    .simulator-card {
+      background: var(--bg-card);
+      border: 2px solid var(--indigo-primary);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      position: relative;
+    }
+    .sim-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 14px;
+      margin-bottom: 18px;
+    }
+    .lock-status-pill {
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-locked {
+      background: rgba(239, 68, 68, 0.16);
+      border: 1px solid var(--crimson);
+      color: #FCA5A5;
+    }
+    .status-unlocked {
+      background: var(--emerald-glow);
+      border: 1px solid var(--emerald);
+      color: #6EE7B7;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.35);
+    }
+
+    .qr-door-plaque {
+      background: #fff;
+      color: #161616;
+      border-radius: 12px;
+      padding: 18px;
+      text-align: center;
+      margin-bottom: 18px;
+      border: 3px solid #232A68;
+    }
+    .qr-door-plaque h4 {
+      font-family: 'Fjalla One', sans-serif;
+      font-size: 1.1rem;
+      color: #232A68;
+      letter-spacing: 0.04em;
+      margin-bottom: 4px;
+    }
+    .qr-svg-wrap {
+      width: 148px;
+      height: 148px;
+      margin: 10px auto;
+      background: #F6F6F6;
+      border: 2px dashed #7077CF;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+    }
+
+    .sim-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .sim-step {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 11px 14px;
+      font-size: 0.88rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.25s;
+    }
+    .sim-step.done {
+      border-color: var(--emerald);
+      background: rgba(16, 185, 129, 0.1);
+    }
+    .sim-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .btn-bink {
+      grid-column: 1 / -1;
+      background: linear-gradient(135deg, #10B981, #059669);
+      color: #fff;
+      font-family: 'Fjalla One', sans-serif;
+      font-size: 1.15rem;
+      letter-spacing: 0.05em;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      text-transform: uppercase;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
+      transition: all 0.2s;
+    }
+    .btn-bink:hover { transform: translateY(-2px); filter: brightness(1.08); }
+    .btn-secondary {
+      background: var(--bg-elevated);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      padding: 10px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.86rem;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover { border-color: var(--indigo-primary); background: rgba(112, 119, 207, 0.15); }
+
+    /* Live Event Log */
+    .telemetry-console {
+      margin-top: 14px;
+      background: #070A10;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: #93C5FD;
+      max-height: 155px;
+      overflow-y: auto;
+    }
+
+    /* Architecture & Waymo Section */
+    .section {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 36px 24px;
+    }
+    .section-title {
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+    .section-sub {
+      color: var(--text-muted);
+      margin-bottom: 28px;
+      max-width: 780px;
+    }
+    .cards-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 22px;
+    }
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .feature-card .tag {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #A5B4FC;
+      background: rgba(112, 119, 207, 0.16);
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+    .feature-card h3 {
+      font-size: 1.35rem;
+      margin-bottom: 10px;
+    }
+    .feature-card p {
+      color: var(--text-muted);
+      font-size: 0.94rem;
+      margin-bottom: 14px;
+    }
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 0.88rem;
+    }
+    .feature-list li::before {
+      content: "✓ ";
+      color: var(--emerald);
+      font-weight: 900;
+    }
+
+    /* Hardware Relay Matrix */
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--bg-card);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+    }
+    .matrix-table th {
+      background: var(--indigo-deep);
+      color: #fff;
+      font-family: 'Fjalla One', sans-serif;
+      letter-spacing: 0.04em;
+      text-align: left;
+      padding: 14px 16px;
+      font-size: 0.95rem;
+    }
+    .matrix-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 0.9rem;
+      color: var(--text-main);
+    }
+    .matrix-table tr:nth-child(even) td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="topbar">
+    <a href="index.html" class="brand">
+      <span class="brand-badge">MARGINVAULT AI</span>
+      <span class="display-font" style="font-size:1.1rem; color:#A5B4FC;">GATEKEEPER™ 3:00 AM NIGHTDROP QR</span>
+    </a>
+    <div class="nav-links">
+      <a href="index.html">← Main Landing Page</a>
+      <a href="snap.html">Driver / Invoice Snap App</a>
+      <a href="gatekeeper.html" class="active">3 AM GateKeeper QR</a>
+      <a href="admin.html">Founder Command Center</a>
+    </div>
+  </nav>
+
+  <!-- HERO + INTERACTIVE SIMULATOR -->
+  <section class="hero">
+    <div>
+      <div class="eyebrow">● LIVE ARCHITECTURE • "NO INVOICE SNAP = NO DOOR UNLOCK"</div>
+      <h1>3:00 AM NIGHTDROP QR: <span>"BINK!" SMART DOOR UNLOCK</span> + AUTO-INVOICE AUDIT</h1>
+      <p class="lead">
+        Every night between 2:00 AM and 5:30 AM, drivers haul 30 lbs of meat, cases of salad greens, and bakery racks into San Francisco restaurants while the owner is asleep. 
+        <strong>MarginVault GateKeeper™</strong> turns the restaurant's back door into an automated customs checkpoint.
+      </p>
+
+      <!-- DIRECT ANSWER TO ALAN'S STRATEGIC QUESTION -->
+      <div class="strategy-box">
+        <h3>💡 DOES THIS MAKE SENSE FOR MARGINVAULT? (YES — HERE IS WHY IT IS OUR MILLION-DOLLAR MOAT)</h3>
+        <p style="font-size: 0.92rem; color: #E2E8F0;">
+          Before GateKeeper, the hardest habit in restaurant software was getting a busy chef to remember to photograph crumpled paper invoices. 
+          <strong>By tying the 3:00 AM smart door lock to the invoice scan, the delivery driver does 100% of the work for the restaurant owner:</strong>
+        </p>
+        <div class="strategy-grid">
+          <div class="strategy-pill">
+            <strong>1. Included Inside MarginVault ("GateKeeper Mode")</strong>
+            The driver cannot unlock the delivery vestibule until they scan the door QR code and snap the paper invoice + stacked crates. 100% invoice capture, zero stolen brass keys, instant 3 AM short-drop detection.
+          </div>
+          <div class="strategy-pill">
+            <strong>2. Standalone Spin-Out ("NightDrop QR™" Network)</strong>
+            Can also be sold as a standalone $99/mo Smart Receiving & Waymo/Autonomous Courier Access pass for bars, ghost kitchens, offices, and commissaries that just want secure keyless night drops!
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <button class="btn-primary" onclick="triggerBinkSimulation('meat')">⚡ TEST 3:04 AM MEAT & SALAD DROP ("BINK!")</button>
+        <button class="btn-primary" style="background:#232A68; border:1px solid #7077CF;" onclick="triggerBinkSimulation('waymo')">🚕 TEST AUTONOMOUS / WAYMO COURIER DROP</button>
+      </div>
+    </div>
+
+    <!-- INTERACTIVE DOOR & QR SIMULATOR -->
+    <div class="simulator-card">
+      <div class="sim-header">
+        <div>
+          <div class="display-font" style="font-size: 1.2rem;">VESTIBULE DOOR #1 — NORTH BEACH BISTRO</div>
+          <div class="mono" style="font-size: 0.78rem; color: var(--text-muted);" id="simClock">03:04:19 AM PST • SMART STRIKE RELAY ARMED</div>
+        </div>
+        <div id="lockBadge" class="lock-status-pill status-locked">
+          <span id="lockIcon">🔒</span> <span id="lockText">LOCKED</span>
+        </div>
+      </div>
+
+      <div class="qr-door-plaque">
+        <h4>DELIVERY DRIVERS & NIGHT COURIERS: SCAN TO UNLOCK</h4>
+        <p style="font-size: 0.78rem; color: #5E5E5E;">No physical key required. Scan QR → Snap Invoice & Crates → Door Unlocks for 10 Mins</p>
+        <div class="qr-svg-wrap" id="qrBox">
+          <!-- Crisp SVG QR Code pointing to marginvaultai.com/snap.html?mode=nightdrop -->
+          <svg viewBox="0 0 120 120" width="128" height="128" fill="#161616">
+            <rect x="8" y="8" width="32" height="32" fill="none" stroke="#232A68" stroke-width="6"/>
+            <rect x="16" y="16" width="16" height="16" fill="#232A68"/>
+            <rect x="80" y="8" width="32" height="32" fill="none" stroke="#232A68" stroke-width="6"/>
+            <rect x="88" y="16" width="16" height="16" fill="#232A68"/>
+            <rect x="8" y="80" width="32" height="32" fill="none" stroke="#232A68" stroke-width="6"/>
+            <rect x="16" y="88" width="16" height="16" fill="#232A68"/>
+            <!-- Data Matrix Pattern -->
+            <rect x="48" y="12" width="8" height="8"/><rect x="64" y="12" width="8" height="16"/>
+            <rect x="48" y="28" width="12" height="8"/><rect x="48" y="44" width="24" height="8" fill="#7077CF"/>
+            <rect x="12" y="48" width="16" height="8"/><rect x="36" y="56" width="16" height="12"/>
+            <rect x="60" y="60" width="16" height="16" fill="#7077CF"/><rect x="84" y="48" width="12" height="20"/>
+            <rect x="100" y="56" width="12" height="8"/><rect x="48" y="80" width="16" height="12"/>
+            <rect x="72" y="84" width="12" height="16"/><rect x="92" y="80" width="20" height="12" fill="#232A68"/>
+            <rect x="52" y="100" width="16" height="12"/><rect x="84" y="100" width="28" height="12"/>
+          </svg>
+        </div>
+        <div class="mono" style="font-size: 0.74rem; color: #232A68; font-weight: 700;">
+          marginvaultai.com/snap.html?door=sf-nb-01&mode=nightdrop
+        </div>
+      </div>
+
+      <div class="sim-steps">
+        <div class="sim-step" id="step1">
+          <span><strong>1. Driver QR Scan & GPS Geofence</strong> (Within 15m of Door)</span>
+          <span class="mono" id="step1Status" style="color:var(--text-muted);">STANDBY</span>
+        </div>
+        <div class="sim-step" id="step2">
+          <span><strong>2. Mandatory Photo Proof</strong> (Invoice + 30 lb Meat / Salad Stack)</span>
+          <span class="mono" id="step2Status" style="color:var(--text-muted);">STANDBY</span>
+        </div>
+        <div class="sim-step" id="step3">
+          <span><strong>3. Smart Strike "BINK!" Unlock</strong> + 6:00 AM Owner Audit Alert</span>
+          <span class="mono" id="step3Status" style="color:var(--text-muted);">LOCKED</span>
+        </div>
+      </div>
+
+      <div class="sim-controls">
+        <button class="btn-bink" onclick="triggerBinkSimulation('meat')">
+          🔓 SIMULATE 3:00 AM QR SCAN → "BINK!" UNLOCK DOOR
+        </button>
+        <button class="btn-secondary" onclick="triggerBinkSimulation('waymo')">
+          🚕 Simulate Waymo / Courier Trunk Code
+        </button>
+        <button class="btn-secondary" onclick="window.location.href='snap.html?mode=nightdrop'">
+          📱 Open Driver Mobile Snap View →
+        </button>
+      </div>
+
+      <div class="telemetry-console" id="telemetryLog">
+        [03:00:00] GATEKEEPER AI READY • Door #sf-nb-01 armed. Waiting for 3 AM vendor QR scan...
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW THE 3-PART ECOSYSTEM WORKS (DRIVERS + WAYMO/AUTONOMOUS + MARGINVAULT OCR) -->
+  <section class="section">
+    <h2 class="section-title">HOW OUR SCALABLE ACCESS & AUTONOMOUS DELIVERY FRAMEWORK WORKS</h2>
+    <p class="section-sub">
+      One unified system that connects regional farms/commissaries, 3:00 AM truck drivers, autonomous urban fleets (Waymo / robotaxis / gig couriers), and restaurant back doors.
+    </p>
+
+    <div class="cards-3">
+      <div class="feature-card">
+        <span class="tag">PHASE 1 • 3:00 AM TRUCK & COMMISSARY DROPS</span>
+        <h3>NO KEY COPIES. NO STATIC PIN CODES.</h3>
+        <p>
+          Restaurant owners currently give physical keys or permanent alarm codes to dozens of rotating meat, produce, and linen drivers. When a driver quits, anyone can walk in at 3 AM.
+        </p>
+        <ul class="feature-list">
+          <li>Driver walks up to the door and scans the weatherproof <strong>MarginVault GateKeeper QR plaque</strong>.</li>
+          <li>Browser opens instantly (zero app install required) and verifies GPS proximity + vendor phone number.</li>
+          <li>Driver snaps the paper invoice to trigger the 10-minute magnetic door strike unlock (<em>"Bink!"</em>).</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <span class="tag">PHASE 2 • PHYSICAL + DIGITAL PROOF LOOP</span>
+        <h3>INSTANT CRATE & INVOICE VERIFICATION</h3>
+        <p>
+          What happens when the invoice says <strong>"30 lbs Prime Sirloin + 4 Cases Baby Greens"</strong>, but the driver only leaves 20 lbs on the floor at 3:15 AM?
+        </p>
+        <ul class="feature-list">
+          <li>Before the interior vestibule door re-locks, the driver snaps a 2-second photo of the stacked crates inside the cooler/vestibule.</li>
+          <li>MarginVault AI compares the <strong>Invoice OCR Line Items</strong> against the <strong>Physical Crate Photo</strong>.</li>
+          <li>If there is a short-drop or a stealth $14.50/case price hike, the credit memo is waiting on the owner's phone at 6:00 AM.</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <span class="tag">PHASE 3 • WAYMO & NON-DRIVING SUPPLIER NETWORK</span>
+        <h3>AUTONOMOUS & CURBSIDE MICRO-FREIGHT</h3>
+        <p>
+          Small regional bakers, specialty mushroom/produce growers, or elder family suppliers who don't drive a commercial box truck into SF traffic can still deliver effortlessly.
+        </p>
+        <ul class="feature-list">
+          <li>Supplier loads sealed thermal totes into an autonomous fleet vehicle (Waymo / local EV runner) outside the city core.</li>
+          <li>When the vehicle arrives curbside at the restaurant, the store's night porter—or an on-foot MarginVault runner—gets a 1-tap QR trunk/door handoff token.</li>
+          <li>Chain of custody + temperature/invoice timestamp is logged end-to-end.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- HARDWARE & SMART LOCK COMPATIBILITY TABLE -->
+  <section class="section">
+    <h2 class="section-title">ZERO-FRICTION SMART LOCK & RELAY INTEGRATION</h2>
+    <p class="section-sub">
+      Works with existing restaurant keypad locks, commercial electric door strikes, and $25 Wi-Fi relays—no $5,000 enterprise access control rip-and-replace required.
+    </p>
+    <table class="matrix-table">
+      <thead>
+        <tr>
+          <th>Door Hardware Type</th>
+          <th>How "Bink!" Unlock Works at 3:00 AM</th>
+          <th>Hardware Cost</th>
+          <th>Install Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1. Smart Keypad Locks</strong> (Schlage Encode, Yale Assure, August Pro, Lockly)</td>
+          <td>After driver snaps invoice photo, screen displays a <strong>1-Time 10-Minute Rolling PIN</strong> (e.g. <span class="mono">#8492</span>) + fires cloud webhook unlock.</td>
+          <td>$0 (Uses existing smart keypad) or $189 new</td>
+          <td>10 Minutes</td>
+        </tr>
+        <tr>
+          <td><strong>2. Commercial Electric Strike / Mag-Lock</strong> (Shelly Plus 1 / UniFi Access / Verkada)</td>
+          <td>MarginVault Cloud fires a signed HTTPS webhook to the store's relay, buzzing the door open for 15 seconds with an audible <strong>"BINK!"</strong> chime.</td>
+          <td>$24 Wi-Fi Relay on existing buzzer strike</td>
+          <td>15 Minutes</td>
+        </tr>
+        <tr>
+          <td><strong>3. Heavy Padlock / Roll-Up Gate</strong> (Igloohome Smart Keybox / Master Lock Vault)</td>
+          <td>Generates an offline cryptographic Bluetooth/PIN unlock code on the driver's phone screen only after the invoice photo passes OCR validation.</td>
+          <td>$119 Smart Lockbox</td>
+          <td>2 Minutes (Shackle mount)</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <script>
+    // WebAudio "BINK!" Smart Door Strike Unlock Sound
+    function playBinkSound() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = ctx.currentTime;
+        // High-tech double chime ("BINK-BINK!") + electric strike buzz
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(1046.50, now); // C6
+        osc1.frequency.setValueAtTime(1567.98, now + 0.11); // G6 ("BINK!")
+        gain1.gain.setValueAtTime(0.28, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.46);
+      } catch (e) {}
+    }
+
+    function appendLog(msg) {
+      const box = document.getElementById('telemetryLog');
+      const div = document.createElement('div');
+      div.style.marginTop = '4px';
+      div.textContent = msg;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function triggerBinkSimulation(mode) {
+      const s1 = document.getElementById('step1');
+      const s2 = document.getElementById('step2');
+      const s3 = document.getElementById('step3');
+      const s1t = document.getElementById('step1Status');
+      const s2t = document.getElementById('step2Status');
+      const s3t = document.getElementById('step3Status');
+      const badge = document.getElementById('lockBadge');
+      const lockIcon = document.getElementById('lockIcon');
+      const lockText = document.getElementById('lockText');
+
+      // Reset
+      [s1, s2, s3].forEach(el => el.classList.remove('done'));
+      badge.className = 'lock-status-pill status-locked';
+      lockIcon.textContent = '🔒';
+      lockText.textContent = 'VERIFYING...';
+
+      const isWaymo = mode === 'waymo';
+      appendLog(isWaymo
+        ? '[03:18:02] 🚕 WAYMO / AUTONOMOUS COURIER ARRIVAL: Curbside Geofence verified at 412 Columbus Ave.'
+        : '[03:04:19] 📱 QR SCAN DETECTED: Golden Gate Meat & Produce Driver (Truck #14) at Door #sf-nb-01.');
+
+      setTimeout(() => {
+        s1.classList.add('done');
+        s1t.textContent = 'VERIFIED ✓';
+        s1t.style.color = '#34D399';
+        appendLog(isWaymo
+          ? '[03:18:03] 📸 Manifest QR + Thermal Tote Photo captured (25 lbs Heirloom Greens + Sonoma Cheese).'
+          : '[03:04:20] 📸 INVOICE + CRATE PHOTO CAPTURED: 30 lbs Choice Chuck Roll + 4 Cases Romaine Salad.');
+      }, 450);
+
+      setTimeout(() => {
+        s2.classList.add('done');
+        s2t.textContent = 'OCR AUDITED ✓';
+        s2t.style.color = '#34D399';
+        appendLog('[03:04:21] 🧠 MARGINVAULT AI AUDIT: Invoice #88412 parsed in 1.1s. Found +$11.40/case overcharge on Romaine -> Flagged for 6 AM credit.');
+      }, 1050);
+
+      setTimeout(() => {
+        playBinkSound();
+        s3.classList.add('done');
+        s3t.textContent = 'BINK! UNLOCKED (09:59)';
+        s3t.style.color = '#34D399';
+        badge.className = 'lock-status-pill status-unlocked';
+        lockIcon.textContent = '🔓';
+        lockText.textContent = 'BINK! UNLOCKED (PIN #7419)';
+        appendLog('[03:04:22] 🔓 BINK! Smart Strike Relay UNLOCKED for 10 mins (One-Time Backup PIN: #7419).');
+      }, 1600);
+    }
+  </script>
+</body>
+</html>

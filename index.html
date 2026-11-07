@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MarginVault AI | Global — Automated Profit &amp; Back-Office Partner for Owners Who Do It All</title>
+<style>
+  :root {
+    --navy: #0f172a;
+    --navy-light: #1e293b;
+    --blue: #1e3a8a;
+    --emerald: #059669;
+    --emerald-bright: #10b981;
+    --emerald-bg: #ecfdf5;
+    --emerald-light: #ecfdf5;
+    --slate: #475569;
+    --light-bg: #f8fafc;
+    --border: #e2e8f0;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Inter, Roboto, Helvetica, Arial, sans-serif;
+    color: var(--navy);
+    background-color: #ffffff;
+    line-height: 1.6;
+  }
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+  /* Sticky Navigation */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 32px;
+  }
+  .nav-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .nav-links {
+    display: flex;
+    gap: 26px;
+    font-weight: 600;
+    font-size: 14.5px;
+    color: var(--slate);
+    align-items: center;
+  }
+  .nav-links a:hover {
+    color: var(--emerald);
+  }
+  .btn-primary {
+    background: var(--emerald);
+    color: #ffffff !important;
+    padding: 11px 22px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 14.5px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+    display: inline-block;
+  }
+  .btn-primary:hover {
+    background: #047857;
+    transform: translateY(-1px);
+  }
+  .btn-outline {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    padding: 11px 22px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 14.5px;
+    cursor: pointer;
+    display: inline-block;
+  }
+  .btn-outline:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Hero Section */
+  .hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #064e3b 100%);
+    color: #ffffff;
+    padding: 76px 32px 84px 32px;
+  }
+  .hero-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 48px;
+    align-items: center;
+  }
+  .pill {
+    display: inline-block;
+    background: rgba(16, 185, 129, 0.18);
+    border: 1px solid #34d399;
+    color: #6ee7b7;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 999px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .hero h1 {
+    font-size: 44px;
+    line-height: 1.15;
+    margin: 0 0 18px 0;
+    letter-spacing: -0.8px;
+  }
+  .hero h1 span {
+    color: #34d399;
+  }
+  .hero p.lead {
+    font-size: 18px;
+    color: #cbd5e1;
+    margin: 0 0 28px 0;
+    max-width: 610px;
+  }
+  .hero-cta-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+  .trust-strip {
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: #94a3b8;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    padding-top: 20px;
+  }
+  .trust-strip strong {
+    color: #f8fafc;
+  }
+
+  /* Phone SMS Mockup in Hero */
+  .sms-card {
+    background: #1e293b;
+    border: 1.5px solid #334155;
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4);
+  }
+  .sms-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: #94a3b8;
+  }
+  .sms-tabs {
+    display: flex;
+    gap: 6px;
+  }
+  .sms-tab {
+    background: #0f172a;
+    color: #cbd5e1;
+    border: 1px solid #334155;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .sms-tab.active {
+    background: var(--emerald);
+    color: #ffffff;
+    border-color: var(--emerald-bright);
+  }
+  .sms-bubble {
+    background: #0f172a;
+    border-left: 4px solid #10b981;
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12.8px;
+    color: #e2e8f0;
+    line-height: 1.55;
+  }
+  .sms-bubble .green {
+    color: #34d399;
+    font-weight: 700;
+  }
+
+  /* Section Container */
+  .section {
+    padding: 76px 32px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .section-alt {
+    background: var(--light-bg);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .sec-title {
+    text-align: center;
+    max-width: 760px;
+    margin: 0 auto 48px auto;
+  }
+  .sec-title h2 {
+    font-size: 34px;
+    margin: 0 0 12px 0;
+    letter-spacing: -0.5px;
+  }
+  .sec-title p {
+    color: var(--slate);
+    font-size: 17px;
+    margin: 0;
+  }
+
+  /* 5 Pillars for Do-It-All Owners */
+  .pillars-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 24px;
+  }
+  .pillar-card {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-top: 4px solid var(--navy);
+    border-radius: 12px;
+    padding: 26px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+    transition: transform 0.2s ease;
+  }
+  .pillar-card:hover {
+    transform: translateY(-3px);
+    border-top-color: var(--emerald);
+  }
+  .pillar-num {
+    display: inline-block;
+    background: var(--emerald-bg);
+    color: var(--emerald);
+    font-weight: 800;
+    font-size: 12.5px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+  }
+  .pillar-card h3 {
+    margin: 0 0 10px 0;
+    font-size: 19px;
+  }
+  .pillar-card p {
+    color: var(--slate);
+    font-size: 14.5px;
+    margin: 0 0 14px 0;
+  }
+  .pillar-impact {
+    background: #f8fafc;
+    border-left: 3px solid var(--emerald);
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--navy);
+  }
+
+  /* Interactive Profit Calculator */
+  .calc-box {
+    background: #ffffff;
+    border: 2px solid var(--navy);
+    border-radius: 16px;
+    padding: 36px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: center;
+  }
+  .calc-controls label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 8px;
+    font-size: 14.5px;
+  }
+  .calc-controls select, .calc-controls input[type="range"] {
+    width: 100%;
+    margin-bottom: 22px;
+  }
+  .calc-controls select {
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .calc-results {
+    background: var(--navy);
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 28px;
+  }
+  .res-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #334155;
+    font-size: 14.5px;
+  }
+  .res-total {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 2px solid #10b981;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .res-total .big-num {
+    font-size: 32px;
+    font-weight: 800;
+    color: #34d399;
+  }
+
+  /* Pricing Grid */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  .price-card {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px 26px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .price-card.featured {
+    border: 2.5px solid var(--emerald);
+    box-shadow: 0 12px 30px rgba(5, 150, 105, 0.12);
+    position: relative;
+  }
+  .feat-badge {
+    position: absolute;
+    top: -13px;
+    right: 24px;
+    background: var(--emerald);
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 999px;
+    text-transform: uppercase;
+  }
+  .price-amt {
+    font-size: 36px;
+    font-weight: 800;
+    margin: 12px 0 4px 0;
+  }
+  .price-amt span {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--slate);
+  }
+  .price-list {
+    padding-left: 20px;
+    margin: 18px 0 26px 0;
+    color: #334155;
+    font-size: 14px;
+  }
+  .price-list li {
+    margin-bottom: 10px;
+  }
+
+  /* Security Banner */
+  .security-banner {
+    background: var(--navy);
+    color: #ffffff;
+    border-radius: 16px;
+    padding: 40px;
+    margin-top: 20px;
+  }
+  .sec-grid-5 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 18px;
+    margin-top: 24px;
+  }
+  .sec-item {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .sec-item h4 {
+    margin: 0 0 6px 0;
+    color: #34d399;
+    font-size: 14.5px;
+  }
+  .sec-item p {
+    margin: 0;
+    font-size: 13px;
+    color: #cbd5e1;
+  }
+
+  footer {
+    background: #090d16;
+    color: #94a3b8;
+    padding: 48px 32px;
+    text-align: center;
+    font-size: 14px;
+  }
+
+  @media (max-width: 920px) {
+    .hero-grid, .calc-box, .pricing-grid {
+      grid-template-columns: 1fr;
+    }
+    .hero h1 {
+      font-size: 34px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- STICKY HEADER WITH EMBEDDED SVG LOGO -->
+<header>
+  <div class="nav-wrap">
+    <a href="#" style="display:flex; align-items:center;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 72" width="270" height="54">
+        <defs>
+          <linearGradient id="navShield" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#0f172a"/>
+            <stop offset="55%" stop-color="#1e3a8a"/>
+            <stop offset="100%" stop-color="#059669"/>
+          </linearGradient>
+        </defs>
+        <g transform="translate(4, 4)">
+          <path d="M32 3 L60 14 L60 39 C60 54 47 63 32 67 C17 63 4 54 4 39 L4 14 Z" fill="url(#navShield)" stroke="#10b981" stroke-width="2"/>
+          <rect x="19" y="37" width="5" height="12" rx="1.5" fill="#94a3b8"/>
+          <rect x="27" y="30" width="5" height="19" rx="1.5" fill="#38bdf8"/>
+          <rect x="35" y="23" width="5" height="26" rx="1.5" fill="#34d399"/>
+          <path d="M17 31 L27 21 L35 27 L47 15" fill="none" stroke="#34d399" stroke-width="2.8" stroke-linecap="round"/>
+        </g>
+        <g transform="translate(76, 0)">
+          <text x="0" y="38" font-family="'Segoe UI', Inter, sans-serif" font-size="27" font-weight="800" fill="#0f172a" letter-spacing="-0.6">Margin<tspan fill="#059669">Vault</tspan></text>
+          <rect x="168" y="18" width="32" height="19" rx="4" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5"/>
+          <text x="176" y="32" font-family="'Segoe UI', Inter, sans-serif" font-size="11.5" font-weight="800" fill="#059669">AI</text>
+          <text x="2" y="56" font-family="'Segoe UI', Inter, sans-serif" font-size="9.5" font-weight="700" fill="#475569" letter-spacing="1.4">SAN FRANCISCO &bull; PROFIT VAULT</text>
+        </g>
+      </svg>
+    </a>
+    <nav class="nav-links">
+      <a href="#what-we-do">What We Do</a>
+      <a href="#calculator">Live Profit Calculator</a>
+      
+      <a href="#pricing">1-Year Early Adopter Lock-In</a>
+      <a href="#field-team">Join Street Team</a>
+      <a href="gatekeeper.html" style="color:#4f46e5; font-weight:800;">&#128275; 3 AM GateKeeper QR</a>
+      <a href="snap.html" style="color:var(--emerald); font-weight:800;">&#128247; 1-Tap Client Snap App</a>
+      <a href="#signup" class="btn-primary">Lock In 1 Full Year Free &rarr;</a>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO SECTION -->
+<section class="hero">
+  <div class="hero-grid">
+    <div>
+      <div class="pill">Invite-Only Founding Charter &bull; 1 Full Year Locked In</div>
+      <h1>Built for Small Restaurant, Bakery &amp; Corner Store Owners Who <span>Do It All.</span></h1>
+      <p class="lead">You didn't open a restaurant, bakery, cafe, deli, or corner liquor store to spend midnight checking paper vendor invoices, updating POS barcodes, and fighting DoorDash deductions. <strong>Invited Early Adopters get 1 Full Year of MarginVault AI Locked In Free ($0 Upfront)—just snap a photo of your delivery invoices and we recover +$4,500 to +$17,500/month in hidden profit.</strong></p>
+      <div class="hero-cta-row">
+        <a href="#signup" class="btn-primary">Lock In Your 1-Year Free Early Adopter Vault &rarr;</a>
+        <a href="gatekeeper.html" class="btn-outline" style="border-color:#34d399; color:#ecfdf5;">&#128275; NEW: 3 AM NightDrop QR Door Unlock</a>
+        <a href="snap.html?store=dj_liquors" class="btn-outline">&#128247; Instant 60-Sec Invoice Camera Scan</a>
+      </div>
+      <div class="trust-strip">
+        <span><strong>1 Full Year Free</strong> Early Adopter Lock-In</span>
+        <span><strong>60-Second</strong> SMS Action Cards</span>
+        <span><strong>100% Local</strong> Banking &amp; Tax-ID Redaction</span>
+      </div>
+    </div>
+
+    <!-- LIVE INTERACTIVE SMS DEMO -->
+    <div class="sms-card">
+      <div class="sms-header">
+        <span><strong>1. Click Your Store Type Below:</strong></span>
+        <div class="sms-tabs">
+          <button class="sms-tab active" onclick="showSms('bakery', this)">3-Store Bakery</button>
+          <button class="sms-tab" onclick="showSms('liquor', this)">Corner/Liquor Store</button>
+        </div>
+      </div>
+      <div id="sms-display" class="sms-bubble">
+        <div class="green">[MarginVault AI — Weekly Profit Alert: Golden Gate Bakery (Sample)]</div>
+        <p style="margin:8px 0;">Hey Carlos &amp; Elena — here is your 60-second summary for this week:</p>
+        <p style="margin:8px 0;"><span class="green">&bull; Protected &amp; Found This Week: +$3,253.00</span></p>
+        <p style="margin:6px 0;"><strong>1) Cross-Store Egg Overcharge ($220 Credit):</strong> Store #3 was billed $59.25/case vs $54.00 at Store #1. Reply <strong>"SEND"</strong> to dispatch credit claim to distributor.</p>
+        <p style="margin:6px 0;"><strong>2) 4 AM Weather Bake-Sheet:</strong> Rain forecast tomorrow—bake +4 trays Sweet Pastries &amp; Croissants, -2 trays sandwich rolls ($114 waste prevented).</p>
+        <p style="margin:6px 0 0 0;"><strong>3) Delivery App Disputes:</strong> Won 9 unfair "missing item" chargebacks across Stores #1 &amp; #2 (<span class="green">+$265.40 credited Friday</span>).</p>
+      </div>
+      <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+        <a href="#signup" class="btn-primary" style="flex:1; text-align:center; padding:12px 14px; font-size:14px;">&#128274; Lock In 1 Full Year Free (Early Adopter) &rarr;</a>
+        <a href="snap.html?store=dj_liquors" class="btn-outline" style="padding:12px 14px; font-size:13.5px; text-align:center;">&#128247; Snap 1st Invoice Now</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DETAILED DESCRIPTION: THE 5 JOBS WE TAKE OFF AN OWNER'S PLATE -->
+<section id="what-we-do" class="section">
+  <div class="sec-title">
+    <h2>What We Do for Small Businesses Where the Owner Does Everything</h2>
+    <p>When you wear 10 hats—buyer, shift manager, bookkeeper, pricemaker, and marketer—suppliers and delivery apps quietly chip away 6% to 11% of your revenue. MarginVault AI replaces 20 hours/week of back-office grind with 5 automated profit engines:</p>
+  </div>
+
+  <div class="pillars-grid">
+    <div class="pillar-card">
+      <span class="pillar-num">JOB #1 TAKEN OFF YOUR PLATE</span>
+      <h3>"Text-a-Photo" Vendor Invoice &amp; Barcode Watchdog</h3>
+      <p>Distributors (Sysco, US Foods, BakeMark, Southern Glazer's, RNDC, Reyes Beer) quietly hike case costs 8%–14% on paper invoices or bill your 2nd location higher than your 1st. Meanwhile, your POS register prices stay frozen for months.</p>
+      <p><strong>How We Do It For You:</strong> Whenever a delivery truck drops off a paper invoice, you just text us a photo. Within 5 minutes, we text back the exact 5–10 register barcode price updates needed today plus any cross-store overcharge credits or 5-case "Post-Off" rebates.</p>
+      <div class="pillar-impact">Avg. Owner Recovery: +$3,800 to +$5,200 / Month</div>
+    </div>
+
+    <div class="pillar-card">
+      <span class="pillar-num">JOB #2 TAKEN OFF YOUR PLATE</span>
+      <h3>Zero-Commission Delivery &amp; Chargeback Fighter</h3>
+      <p>Delivery apps take 18%–28% commissions and automatically deduct $15–$45 from your payout every time a customer clicks "missing item"—costing busy shops $1,000+/month.</p>
+      <p><strong>How We Do It For You:</strong> 1) We build and sync a <strong>Commission-Hedged Delivery Menu (+22% markup)</strong> so the customer covers 100% of the app fee. 2) Our dispute bot cross-checks error deductions against your Toast/Square ticket timestamps to win back 75%+ of unfair chargebacks. 3) We shift 20% of repeat regulars onto your commission-free direct ordering.</p>
+      <div class="pillar-impact">Avg. Owner Recovery: +$4,500 to +$5,500 / Month</div>
+    </div>
+
+    <div class="pillar-card">
+      <span class="pillar-num">JOB #3 TAKEN OFF YOUR PLATE</span>
+      <h3>8:00 PM Next-Day Bake, Prep &amp; Inventory Forecaster</h3>
+      <p>Guessing how many trays of pastries, bread, or prep items to make at 4:00 AM leads to stale food thrown in the trash on slow Tuesdays or selling out at 11:00 AM on rainy Sundays.</p>
+      <p><strong>How We Do It For You:</strong> Every night at 8:00 PM, our system combines your historical POS hourly sales + tomorrow's Bay Area weather forecast + payday/holiday calendars and texts your head baker or kitchen manager tomorrow's exact tray &amp; prep count.</p>
+      <div class="pillar-impact">Avg. Waste &amp; Stockout Savings: +$1,100 to +$3,400 / Month</div>
+    </div>
+
+    <div class="pillar-card">
+      <span class="pillar-num">JOB #4 TAKEN OFF YOUR PLATE</span>
+      <h3>Automated Neighborhood Hospital &amp; Office Catering Engine</h3>
+      <p>When you're working behind the counter or in the kitchen, you never have time to pitch nearby hospitals (SF General, UCSF, Seton, Kaiser), biotech offices, or schools on $350 morning catering orders.</p>
+      <p><strong>How We Do It For You:</strong> We run an automated local B2B catering outreach engine within 2 miles of your shop—booking high-margin recurring morning breakfast boxes, sandwich platters, and corporate bundles directly into your kitchen calendar.</p>
+      <div class="pillar-impact">Avg. New Catering Profit: +$2,800 to +$4,400 / Month</div>
+    </div>
+
+    <div class="pillar-card">
+      <span class="pillar-num">JOB #5 TAKEN OFF YOUR PLATE</span>
+      <h3>CRV, Vendor Rebates &amp; CA Kitchen Tax Refunds</h3>
+      <p>Independent restaurants and convenience stores routinely miss thousands in distributor volume rebates, damaged/shorted bottle credits, CRV reconciliations, and California kitchen/packaging tax exemptions.</p>
+      <p><strong>How We Do It For You:</strong> We audit your historical distributor invoices to claim every uncredited short-delivery, volume rebate, and eligible California tax refund—requiring only your final sign-off.</p>
+      <div class="pillar-impact">Avg. Rebate &amp; Credit Recovery: +$800 to +$2,500 / Month</div>
+    </div>
+
+    <div class="pillar-card" style="background:var(--navy); color:#ffffff; border-top-color:#34d399;">
+      <span class="pillar-num" style="background:rgba(16,185,129,0.2); color:#6ee7b7;">THE BOTTOM LINE FOR YOU</span>
+      <h3 style="color:#ffffff;">You Keep Running Your Shop. We Text You the Found Money.</h3>
+      <p style="color:#cbd5e1;">No new dashboards to learn. No complicated software training for your staff. Your managers snap photos of paper invoices; you get a 60-second SMS checklist twice a week and a Monthly Found-Money Scorecard proving a 5x–8x return.</p>
+      <div class="pillar-impact" style="background:rgba(255,255,255,0.08); color:#34d399;">Guaranteed Minimum 3x ROI or You Pay $0.00</div>
+    </div>
+  </div>
+</section>
+
+<!-- INTERACTIVE LIVE PROFIT CALCULATOR -->
+<div class="section-alt">
+  <section id="calculator" class="section">
+    <div class="sec-title">
+      <h2>Interactive Small Business Profit Leak Calculator</h2>
+      <p>Select your business type and monthly wholesale vendor spend to see what MarginVault AI recovers for your shop:</p>
+    </div>
+
+    <div class="calc-box">
+      <div class="calc-controls">
+        <label for="bizType">1. Select Your Business Type:</label>
+        <select id="bizType" onchange="updateCalc()">
+          <option value="bakery">Bakery, Restaurant or Cafe (Toast / Square / Clover)</option>
+          <option value="liquor">Convenience Store, Liquor Store or Corner Market (Type-21 / C-Store)</option>
+          <option value="deli">High-Volume Deli, Taqueria or Specialty Grocery Market</option>
+        </select>
+
+        <label for="storeCount">2. Number of Store Locations: <span id="storeCountVal" style="color:var(--emerald);">3 Locations</span></label>
+        <input type="range" id="storeCount" min="1" max="6" value="3" oninput="updateCalc()">
+
+        <label for="vendorSpend">3. Total Monthly Food / Inventory / Vendor Spend: <span id="vendorSpendVal" style="color:var(--emerald);">$45,000 / mo</span></label>
+        <input type="range" id="vendorSpend" min="15000" max="150000" step="5000" value="45000" oninput="updateCalc()">
+      </div>
+
+      <div class="calc-results">
+        <h3 style="margin:0 0 14px 0; color:#34d399;">Your Estimated MarginVault Recovery</h3>
+        <div class="res-row">
+          <span>1. Vendor Invoice Price-Match &amp; POS Shield:</span>
+          <strong id="resInvoice">+$5,047 / mo</strong>
+        </div>
+        <div class="res-row">
+          <span>2. Delivery Markup Shield &amp; Chargeback Disputes:</span>
+          <strong id="resDelivery">+$4,650 / mo</strong>
+        </div>
+        <div class="res-row">
+          <span>3. Prep/Bake Waste Reduction &amp; Local Catering:</span>
+          <strong id="resCatering">+$7,820 / mo</strong>
+        </div>
+        <div class="res-row">
+          <span>Your Flat MarginVault Founding Store Fee:</span>
+          <strong id="resFee" style="color:#94a3b8;">-$699 / mo</strong>
+        </div>
+        <div class="res-total">
+          <div>
+            <div style="font-size:13px; color:#cbd5e1; text-transform:uppercase; font-weight:700;">Net New Profit Added to Your Pocket</div>
+            <div id="resAnnual" style="font-size:14px; color:#94a3b8;">+$201,816 / Year Net Gain (25.1x ROI)</div>
+          </div>
+          <div id="resMonthlyNet" class="big-num">+$16,818/mo</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- 5-LAYER SECURITY SECTION -->
+<section id="security" class="section">
+  <div class="security-banner">
+    <h2 style="margin:0 0 8px 0; font-size:28px;">Private, Owner-Only Data Protection</h2>
+    <p style="margin:0; color:#cbd5e1; max-width:780px;">Your family business's banking details, supplier prices, recipes, and tax IDs are never exposed to public AI models. Every client account is protected by strict, automatic privacy safeguards built for local restaurants, convenience stores, and small businesses:</p>
+    <div class="sec-grid-5">
+      <div class="sec-item">
+        <h4>1. 100% Private Numbers</h4>
+        <p>100% of your invoice, margin, and tax calculations run locally in deterministic Python code—never on a public AI server.</p>
+      </div>
+      <div class="sec-item">
+        <h4>2. Banking &amp; Tax-ID Scrubber</h4>
+        <p>Our local firewall masks ACH routing/account numbers, FEINs, and SSNs before any file is analyzed.</p>
+      </div>
+      <div class="sec-item">
+        <h4>3. Read-Only Isolation</h4>
+        <p>Zero write access to your bank account, check printer, or live POS terminal. You approve every change in 60 seconds.</p>
+      </div>
+      <div class="sec-item">
+        <h4>4. Hard Circuit Breakers</h4>
+        <p>Cryptographic secret scanners and deterministic spend circuit breakers prevent any unauthorized API or cloud charges.</p>
+      </div>
+      <div class="sec-item">
+        <h4>5. 100% Client Ownership</h4>
+        <p>You own 100% of your historical price books, vendor credit binders, and custom storefront catalogs at all times.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRODUCTIZED PRICING SECTION -->
+<section id="pricing" class="section" style="padding-top:10px;">
+  <div class="sec-title">
+    <h2>Invited Early Adopter Charter: 1 Full Year Locked In ($0 Upfront)</h2>
+    <p><strong>Exclusive Invite-Only Window for Our First 15 Founding Stores:</strong> When our field representative invites your store, you get <strong>12 Full Months of MarginVault AI Locked In Free ($0 Upfront)</strong> so we can prove $25,000+ in recovered vendor credits and delivery savings across all four seasons. Stores that join after the 15-store Founding Charter closes pay the standard monthly rates below.</p>
+  </div>
+
+  <div class="pricing-grid">
+    <div class="price-card">
+      <div>
+        <div style="font-weight:800; color:var(--emerald); font-size:13px; text-transform:uppercase;">Tier 1 &bull; Starter Watchdog</div>
+        <h3 style="margin:6px 0; font-size:22px;">Invoice &amp; Barcode Watchdog</h3>
+        <p style="color:var(--slate); font-size:13.5px; margin:0;"><strong>$0 for Year 1 (Invited Early Adopters)</strong> &bull; Standard Rate $199/mo after Year 1.</p>
+        <div class="price-amt">$0 <span>/ Year 1 (<s style="color:#94a3b8;">$199/mo</s> Early Adopter Lock-In)</span></div>
+        <ul class="price-list">
+          <li><strong>Weekly Text-a-Photo Invoice Watchdog</strong> (Sysco, BakeMark, Southern Glazer's, RNDC, Reyes, Core-Mark)</li>
+          <li><strong>Same-Day Register Barcode Update List</strong> to lock in 35%–45% margins</li>
+          <li><strong>5-Case "Post-Off" Discount &amp; Short-Delivery Alerts</strong></li>
+          <li><strong>CRV &amp; Distributor Volume Rebate Tracker</strong></li>
+          <li><strong>Monthly Found-Money Scorecard</strong></li>
+        </ul>
+      </div>
+      <a href="#signup" onclick="selectPlan('tier1')" class="btn-primary" style="text-align:center;">Lock In 1 Full Year Free (Tier 1)</a>
+    </div>
+
+    <div class="price-card featured">
+      <div class="feat-badge">Most Popular &bull; 1-Year Free Early Adopter Charter</div>
+      <div>
+        <div style="font-weight:800; color:var(--emerald); font-size:13px; text-transform:uppercase;">Tier 2 &bull; Complete 1-Store Engine</div>
+        <h3 style="margin:6px 0; font-size:22px;">Full Store Profit &amp; Delivery Vault</h3>
+        <p style="color:var(--slate); font-size:13.5px; margin:0;"><strong>$0 for Year 1 (Invited Early Adopters)</strong> &bull; Complete profit &amp; delivery engine for single-location shops.</p>
+        <div class="price-amt">$0 <span>/ Year 1 (<s style="color:#94a3b8;">$399/mo</s> Early Adopter Lock-In)</span></div>
+        <ul class="price-list">
+          <li><strong>Everything in Tier 1, PLUS:</strong></li>
+          <li><strong>Commission-Hedged Delivery Storefront</strong> (+22% markup on DoorDash/UberEats so app fees cost you $0)</li>
+          <li><strong>Automated DoorDash/UberEats Chargeback Disputes</strong> + Direct-Order QR Migration</li>
+          <li><strong>8:00 PM Weather-Adjusted Bake &amp; Prep Forecaster</strong></li>
+          <li><strong>Local Hospital &amp; Office Catering Outreach</strong></li>
+        </ul>
+      </div>
+      <a href="#signup" onclick="selectPlan('tier2')" class="btn-primary" style="text-align:center;">Lock In 1 Full Year Free (Tier 2)</a>
+    </div>
+
+    <div class="price-card">
+      <div>
+        <div style="font-weight:800; color:var(--blue); font-size:13px; text-transform:uppercase;">Tier 3 &bull; Multi-Unit Group (3 to 6 Locations)</div>
+        <h3 style="margin:6px 0; font-size:22px;">Multi-Store Group Vault</h3>
+        <p style="color:var(--slate); font-size:13.5px; margin:0;"><strong>$0 for Year 1 (Invited Early Adopters)</strong> &bull; Built for 3-Restaurant Groups &amp; expandable up to 6 locations.</p>
+        <div class="price-amt">$0 <span>/ Year 1 (<s style="color:#94a3b8;">$699/mo</s> Early Adopter Lock-In)</span></div>
+        <ul class="price-list">
+          <li><strong>Everything in Tier 2 Across All 3–6 Locations, PLUS:</strong></li>
+          <li><strong>Cross-Store Vendor Price-Matching</strong> (catches when Store #2 or #3 is billed higher than Store #1)</li>
+          <li><strong>Multi-Kitchen Toast / Square Recipe Margin Shield</strong></li>
+          <li><strong>Store-by-Store 4 AM Bake &amp; Prep Forecasting</strong></li>
+          <li><strong>Group-Wide Hospital &amp; Corporate Catering Engine</strong></li>
+        </ul>
+      </div>
+      <a href="#signup" onclick="selectPlan('tier3')" class="btn-primary" style="text-align:center; background:var(--navy);">Lock In 1 Full Year Free (3-to-6 Store Group)</a>
+    </div>
+  </div>
+</section>
+
+<!-- 60-SECOND ZERO-PASSWORD SIGN-UP SECTION -->
+<section id="signup" class="section" style="padding-top:10px;">
+  <div style="background:#ffffff; border:2px solid var(--emerald); border-radius:16px; padding:38px; box-shadow:0 12px 32px rgba(15,23,42,0.06);">
+    <div style="display:grid; grid-template-columns:1.1fr 1fr; gap:36px; align-items:start;">
+      <div>
+        <span style="background:var(--emerald-light); color:#065f46; font-weight:800; font-size:12px; padding:5px 12px; border-radius:999px; text-transform:uppercase;">12-Month Early Adopter Lock-In &bull; Zero Passwords</span>
+        <h2 style="font-size:28px; margin:12px 0 10px 0;">Lock In Your Store's Free 1-Year Early Adopter Vault in 60 Seconds</h2>
+        <p style="color:var(--slate); font-size:15px; margin:0 0 18px 0;">Because you were invited directly during our Founding Charter window, your store receives <strong>12 Full Months of MarginVault AI Free ($0 Upfront)</strong>. Every invoice and POS item you scan builds your store's permanent historical price-defense vault:</p>
+        <ol style="padding-left:20px; color:#1e293b; font-size:14.5px; line-height:1.7;">
+          <li style="margin-bottom:10px;"><strong>Step 1 — Lock In Your Store Vault (Right Here):</strong> Enter your store name, mobile number (for SMS alerts), and POS type. No username or password required.</li>
+          <li style="margin-bottom:10px;"><strong>Step 2 — Snap Your First Delivery Invoice Immediately:</strong> Click the green camera button that appears right after registration (or text us a photo of any wholesale food, bakery, beer, wine, or liquor invoice). Within 60 seconds, we return your exact register barcode updates and vendor overcharge credits.</li>
+          <li style="margin-bottom:10px;"><strong>Step 3 — 12 Months of Continuous Price-Creep Protection:</strong> Every week for a full year, your store's custom price book grows smarter—catching every supplier hike, 5-case Post-Off rebate, and DoorDash deduction automatically.</li>
+          <li><strong>Step 4 — Year-2 Charter Rate Protection:</strong> After we put $25,000+ back into your pocket during Year 1, your store is permanently grandfathered into our Founding Charter rate.</li>
+        </ol>
+      </div>
+
+      <div style="background:#f8fafc; border:1px solid var(--border); border-radius:12px; padding:26px;">
+        <h3 style="margin:0 0 6px 0; font-size:20px;">Lock In Your Free 1-Year Early Adopter Charter</h3>
+        <p style="margin:0 0 16px 0; font-size:13px; color:var(--slate);"><strong>$0 for 12 Full Months</strong> (Invited Early Adopters Only &bull; No Credit Card Required)</p>
+        <form onsubmit="submitSignup(event)">
+          <label style="display:block; font-size:13px; font-weight:700; margin-bottom:4px;">Your Name &amp; Role</label>
+          <input id="suName" type="text" required placeholder="e.g., Marco (Owner) or Field Rep Name" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:12px; box-sizing:border-box;">
+
+          <label style="display:block; font-size:13px; font-weight:700; margin-bottom:4px;">Corner Store / Liquor Store / Bakery / Restaurant Name</label>
+          <input id="suStore" type="text" required placeholder="e.g., DJ Liquors / Golden Gate Bakery" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:12px; box-sizing:border-box;">
+
+          <label style="display:block; font-size:13px; font-weight:700; margin-bottom:4px;">Owner Mobile Phone Number (For Weekly Found-Money SMS Alerts)</label>
+          <input id="suPhone" type="tel" required placeholder="(415) 555-0199" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:12px; box-sizing:border-box;">
+
+          <label style="display:block; font-size:13px; font-weight:700; margin-bottom:4px;">Current POS &amp; Register System</label>
+          <select id="suPos" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:12px; box-sizing:border-box;">
+            <option value="Liquor/Grocery Barcode Scanner (NRG/Verifone/Clover)">Corner / Liquor Store Barcode Scanner (NRG / Verifone / Clover)</option>
+            <option value="Toast POS + DoorDash/UberEats">Toast POS + DoorDash / UberEats</option>
+            <option value="Square POS + DoorDash/UberEats">Square POS + DoorDash / UberEats</option>
+            <option value="Clover POS">Clover POS</option>
+            <option value="Other POS">Other Register / POS System</option>
+          </select>
+
+          <label style="display:block; font-size:13px; font-weight:700; margin-bottom:4px;">Select 1-Year Free Early Adopter Charter Tier</label>
+          <select id="suPlan" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:16px; box-sizing:border-box; font-weight:700; color:#065f46;">
+            <option value="Tier 1: 1-Year Free Early Adopter (Invoice & Barcode Watchdog - Reg $199/mo)">Tier 1: 1-Year Free Early Adopter — Invoice &amp; Barcode Watchdog</option>
+            <option value="Tier 2: 1-Year Free Early Adopter (Full Store Profit & Delivery Vault - Reg $399/mo)" selected>Tier 2: 1-Year Free Early Adopter — Full Store Profit &amp; Delivery Vault</option>
+            <option value="Tier 3: 1-Year Free Early Adopter (Multi-Store Group Vault - Reg $699/mo)">Tier 3: 1-Year Free Early Adopter — Multi-Store Group Vault (Up to 3 Stores)</option>
+          </select>
+
+          <button type="submit" class="btn-primary" style="width:100%; border:none; cursor:pointer; font-size:15.5px;">&#128274; Lock In 1 Full Year Free + Open Invoice Scanner &rarr;</button>
+        </form>
+        <div id="suConfirm" style="display:none; margin-top:14px; padding:12px; background:var(--emerald-light); border:1px solid #10b981; border-radius:8px; font-size:13.5px; color:#065f46;"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FIELD TEAM / STREET CANVASSER HIRING & COMPENSATION MATRIX -->
+<section id="field-team" class="section" style="padding-top:10px;">
+  <div style="background:var(--navy); color:#ffffff; border-radius:16px; padding:36px; border:2px solid #10b981;">
+    <span style="background:rgba(16,185,129,0.2); color:#6ee7b7; font-weight:800; font-size:12px; padding:5px 12px; border-radius:999px; text-transform:uppercase;">Street Team &amp; Field Operations Directives</span>
+    <h2 style="font-size:28px; margin:12px 0 8px 0; color:#ffffff;">On-Foot Field Team Hiring &amp; Compensation Categories</h2>
+    <p style="color:#cbd5e1; font-size:15px; margin:0 0 22px 0;">Because invited merchants get <strong>1 Full Year Free ($0 Upfront)</strong>, walking into a neighborhood corner liquor store, deli, or bakery and snapping their latest delivery invoice on the spot converts at 40%+. Here are our 3 standardized field roles and pay tiers:</p>
+    <div class="pricing-grid">
+      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); border-radius:12px; padding:22px;">
+        <div style="color:#34d399; font-weight:800; font-size:12.5px; text-transform:uppercase;">Category A &bull; Street Invoice Scout (1099)</div>
+        <h3 style="margin:6px 0; color:#ffffff; font-size:19px;">Door-to-Door Invoice Snapper</h3>
+        <div style="font-size:24px; font-weight:800; color:#34d399; margin:8px 0;">$22/hr + $50 / Store Locked In</div>
+        <p style="color:#cbd5e1; font-size:13.5px; margin:0;">Walks 25 neighborhood corner/liquor stores &amp; bakeries per 4-hour shift (10 AM–2 PM). Opens <code>marginvaultai.com</code> on phone, clicks <strong>Corner/Liquor Store</strong>, registers the owner for the <strong>1-Year Free Early Adopter Vault</strong>, and snaps 1 paper delivery invoice on the counter.</p>
+      </div>
+      <div style="background:rgba(255,255,255,0.06); border:1.5px solid #10b981; border-radius:12px; padding:22px;">
+        <div style="color:#34d399; font-weight:800; font-size:12.5px; text-transform:uppercase;">Category B &bull; Bilingual Merchant Closer (1099)</div>
+        <h3 style="margin:6px 0; color:#ffffff; font-size:19px;">POS Baseline &amp; Account Closer</h3>
+        <div style="font-size:24px; font-weight:800; color:#34d399; margin:8px 0;">$100 / Activated Store + 15% Residual</div>
+        <p style="color:#cbd5e1; font-size:13.5px; margin:0;">Exports the store's 5-minute Read-Only POS price list CSV (NRG, Clover, Square, or Toast), locks in the store's weekly Mon/Thu SMS alerts, and earns 15% recurring revenue share when the store converts or upgrades.</p>
+      </div>
+      <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); border-radius:12px; padding:22px;">
+        <div style="color:#34d399; font-weight:800; font-size:12.5px; text-transform:uppercase;">Category C &bull; Territory Squad Lead</div>
+        <h3 style="margin:6px 0; color:#ffffff; font-size:19px;">Corridor Captain (Mission / SOMA / Sunset)</h3>
+        <div style="font-size:24px; font-weight:800; color:#34d399; margin:8px 0;">$28/hr + $25 Override Per Team Lock-In</div>
+        <p style="color:#cbd5e1; font-size:13.5px; margin:0;">Leads a 2-to-3 person street crew across high-density commercial blocks (Mission St, Geary Blvd, 24th St, Broadway, San Bruno Ave), verifying every captured invoice photo inside the MarginVault Admin Command Center.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p style="color:#ffffff; font-weight:700; font-size:16px; margin-bottom:6px;">MarginVault AI &bull; San Francisco, California</p>
+  <p style="margin:0 0 14px 0;">Founded by Alan Musselman | Serving Independent Small &amp; Mid-Sized Businesses Across San Francisco &amp; The Bay Area</p>
+  <p style="margin:0; font-size:12.5px; color:#64748b;">&copy; 2026 MarginVault AI LLC. Protected by 5-Layer Local PII Firewall &amp; Deterministic Spend Guardrails.</p>
+</footer>
+
+<script>
+  const smsTemplates = {
+    bakery: `<div class="green">[MarginVault AI — Weekly Profit Alert: Golden Gate Bakery (Sample)]</div>
+      <p style="margin:8px 0;">Hey Carlos &amp; Elena — here is your 60-second summary for this week:</p>
+      <p style="margin:8px 0;"><span class="green">&bull; Protected &amp; Found This Week: +$3,253.00</span></p>
+      <p style="margin:6px 0;"><strong>1) Cross-Store Egg Overcharge ($220 Credit):</strong> Store #3 was billed $59.25/case vs $54.00 at Store #1. Reply <strong>"SEND"</strong> to dispatch credit claim to distributor.</p>
+      <p style="margin:6px 0;"><strong>2) 4 AM Weather Bake-Sheet:</strong> Rain forecast tomorrow—bake +4 trays Sweet Pastries &amp; Croissants, -2 trays sandwich rolls ($114 waste prevented).</p>
+      <p style="margin:6px 0 0 0;"><strong>3) Delivery App Disputes:</strong> Won 9 unfair "missing item" chargebacks across Stores #1 &amp; #2 (<span class="green">+$265.40 credited Friday</span>).</p>`,
+    liquor: `<div class="green">[MarginVault AI — Weekly Profit Alert: Bayview Corner Spirits (Sample)]</div>
+      <p style="margin:8px 0;">Hey Marco — here is your 60-second summary for your store:</p>
+      <p style="margin:8px 0;"><span class="green">&bull; Protected &amp; Found This Week: +$2,237.00</span></p>
+      <p style="margin:6px 0;"><strong>1) Wholesale Spirits Hike (+10.5%):</strong> Reserve Reposado 750mL case cost rose $24 on today's invoice. Update register barcode from $54.99 to <strong>$63.99 today</strong> (+$224/mo saved).</p>
+      <p style="margin:6px 0;"><strong>2) 5-Case Post-Off Rebate (-$105):</strong> Combine Friday's Vodka/Whiskey order from 3 to 5 cases to claim the $21/case quantity discount.</p>
+      <p style="margin:6px 0 0 0;"><strong>3) Local Delivery Storefront:</strong> 98 orders this week at +22% menu markup = <span class="green">+$1,202.00 net profit</span> after app fees.</p>`
+  };
+
+  function showSms(type, btn) {
+    document.getElementById('sms-display').innerHTML = smsTemplates[type];
+    document.querySelectorAll('.sms-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function updateCalc() {
+    const type = document.getElementById('bizType').value;
+    const stores = parseInt(document.getElementById('storeCount').value, 10);
+    const spend = parseInt(document.getElementById('vendorSpend').value, 10);
+
+    document.getElementById('storeCountVal').textContent = stores + (stores === 1 ? ' Location' : ' Locations');
+    document.getElementById('vendorSpendVal').textContent = '$' + spend.toLocaleString() + ' / mo';
+
+    let invSavings = Math.round(spend * 0.082 + (stores > 1 ? stores * 420 : 0));
+    let delivSavings = 0;
+    let catSavings = 0;
+    let fee = stores === 1 ? 399 : (stores === 3 ? 699 : stores * 233);
+
+    if (type === 'bakery') {
+      delivSavings = stores * 1550;
+      catSavings = stores * 2606;
+    } else if (type === 'liquor') {
+      invSavings = Math.round(spend * 0.095);
+      delivSavings = stores * 5212;
+      catSavings = stores * 450;
+    } else {
+      invSavings = Math.round(spend * 0.09);
+      delivSavings = stores * 2200;
+      catSavings = stores * 1850;
+    }
+
+    const netMo = invSavings + delivSavings + catSavings - fee;
+    const netYr = netMo * 12;
+    const roi = ((invSavings + delivSavings + catSavings) / fee).toFixed(1);
+
+    document.getElementById('resInvoice').textContent = '+$' + invSavings.toLocaleString() + ' / mo';
+    document.getElementById('resDelivery').textContent = '+$' + delivSavings.toLocaleString() + ' / mo';
+    document.getElementById('resCatering').textContent = '+$' + catSavings.toLocaleString() + ' / mo';
+    document.getElementById('resFee').textContent = '-$' + fee.toLocaleString() + ' / mo';
+    document.getElementById('resMonthlyNet').textContent = '+$' + netMo.toLocaleString() + '/mo';
+    document.getElementById('resAnnual').textContent = '+$' + netYr.toLocaleString() + ' / Year Net Gain (' + roi + 'x ROI)';
+  }
+
+  function selectPlan(tier) {
+    const planSelect = document.getElementById('suPlan');
+    if (tier === 'tier1') planSelect.selectedIndex = 0;
+    else if (tier === 'tier2') planSelect.selectedIndex = 1;
+    else if (tier === 'tier3') planSelect.selectedIndex = 2;
+  }
+
+  async function submitSignup(e) {
+    e.preventDefault();
+    const name = document.getElementById('suName').value.trim();
+    const store = document.getElementById('suStore').value.trim();
+    const phone = document.getElementById('suPhone').value.trim();
+    const pos = document.getElementById('suPos').value;
+    const plan = document.getElementById('suPlan').value;
+
+    const slug = store.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'custom_store';
+    const fee = plan.includes('199') ? 199 : (plan.includes('399') ? 399 : 699);
+
+    const newClient = {
+      phone: phone,
+      slug: slug,
+      biz: store,
+      owner: name,
+      tier: plan,
+      fee: fee,
+      pos: pos,
+      pos_type: pos,
+      autoSend: false
+    };
+
+    // 1. Save into localStorage under mv_shared_clients so snap.html & admin.html sync immediately
+    try {
+      const existing = JSON.parse(localStorage.getItem('mv_shared_clients') || '[]');
+      const filtered = existing.filter(c => c.slug !== slug && c.phone !== phone);
+      filtered.unshift(newClient);
+      localStorage.setItem('mv_shared_clients', JSON.stringify(filtered));
+      localStorage.setItem('mv_active_store', slug);
+    } catch (err) {}
+
+    // 2. Sync with cloud_app.py / backend if online
+    let cloudSynced = false;
+    try {
+      const resp = await fetch('/api/public-signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newClient)
+      });
+      if (resp.ok) {
+        cloudSynced = true;
+      }
+    } catch (err) {
+      console.warn('Backend sync deferred (offline/local mode):', err);
+    }
+
+    const subject = encodeURIComponent(`Founding Store Pilot Activation — ${store}`);
+    const body = encodeURIComponent(
+`Hi Alan,
+
+Please activate our Free 14-Day Founding Store Pilot:
+- Owner / Contact: ${name}
+- Store Name & Location: ${store}
+- Mobile Phone for Weekly SMS Alerts: ${phone}
+- POS & Delivery Setup: ${pos}
+- Selected Founding Plan: ${plan}
+- Instant 1-Tap Store Camera App: snap.html?store=${slug}`
+    );
+
+    const confirmBox = document.getElementById('suConfirm');
+    confirmBox.style.display = 'block';
+    confirmBox.style.background = cloudSynced ? '#ecfdf5' : '#fffbeb';
+    confirmBox.style.border = cloudSynced ? '1.5px solid #10b981' : '1.5px solid #f59e0b';
+    confirmBox.innerHTML = `
+      <strong>&#10003; Pilot Vault Reserved for ${store}!</strong><br>
+      Your zero-login store vault (<code>clients/${slug}/</code>) is active right now. Snap your first delivery invoice immediately with zero passwords or texting wait:<br>
+      ${!cloudSynced ? '<div style="margin:6px 0; font-size:12px; color:#b45309; background:#fef3c7; padding:6px 10px; border-radius:6px; border:1px solid #fde68a;">⚠️ Offline / Local Mode: Vault profile saved to browser storage. Automatic cloud synchronization will occur when connected.</div>' : ''}
+      <a id="suInstantSnapBtn" href="snap.html?store=${encodeURIComponent(slug)}" class="btn-primary" style="display:block; text-align:center; margin-top:10px; padding:12px 16px; font-size:14.5px;">
+        [&#128247; Open Your Store's 1-Tap Invoice Camera App Now &rarr;]
+      </a>
+      <div style="margin-top:8px; font-size:12px; text-align:center;">
+        <a href="mailto:alan@marginvaultai.com?subject=${subject}&body=${body}" style="text-decoration:underline; color:#065f46; font-weight:700;">
+          &#9993; Optional: Send Email Confirmation to Alan (${phone})
+        </a>
+      </div>
+    `;
+  }
+</script>
+</body>
+</html>
