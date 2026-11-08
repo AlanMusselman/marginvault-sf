@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MarginVault AI — Day-14 &amp; Monthly Found-Money ROI Scorecard (12.4x ROI)</title>
+  <style>
+    :root {
+      --navy: #0f172a;
+      --navy-mid: #1e293b;
+      --emerald: #059669;
+      --emerald-bright: #10b981;
+      --emerald-bg: #ecfdf5;
+      --blue: #1e3a8a;
+      --slate: #475569;
+      --light: #f8fafc;
+      --border: #cbd5e1;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #e2e8f0;
+      color: var(--navy);
+      line-height: 1.45;
+      padding: 20px 12px 48px;
+    }
+    .page-container {
+      max-width: 980px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+      border: 1px solid var(--border);
+    }
+    .top-header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #ffffff;
+      padding: 24px 28px;
+      border-bottom: 4px solid var(--emerald-bright);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .shield-icon {
+      width: 46px;
+      height: 46px;
+      background: var(--emerald);
+      border: 2px solid #6ee7b7;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 20px;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
+    }
+    .brand-title h1 {
+      font-size: 23px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+    .brand-title p {
+      font-size: 12px;
+      color: #6ee7b7;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-top: 2px;
+    }
+    .header-right {
+      text-align: right;
+    }
+    .guarantee-pill {
+      display: inline-block;
+      background: var(--emerald);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid #6ee7b7;
+    }
+    .header-date {
+      font-size: 12px;
+      color: #cbd5e1;
+      margin-top: 6px;
+    }
+    .intro-bar {
+      background: #f1f5f9;
+      padding: 14px 28px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--navy-mid);
+    }
+    .print-btn {
+      background: var(--navy);
+      color: #ffffff;
+      border: none;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .print-btn:hover {
+      background: var(--blue);
+    }
+    .scorecard-panel {
+      padding: 26px 28px;
+      border-bottom: 2px dashed var(--border);
+    }
+    .store-banner {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .sample-tag {
+      display: inline-block;
+      background: #dbeafe;
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 9px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+      letter-spacing: 0.4px;
+    }
+    .store-banner h2 {
+      font-size: 21px;
+      color: var(--navy);
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .store-meta {
+      font-size: 13px;
+      color: var(--slate);
+      margin-top: 2px;
+    }
+    .strike-rate {
+      text-decoration: line-through;
+      color: #94a3b8;
+      margin-left: 6px;
+      font-weight: 600;
+    }
+    .roi-hero-badge {
+      background: var(--emerald-bg);
+      border: 2px solid var(--emerald);
+      border-radius: 12px;
+      padding: 12px 20px;
+      text-align: center;
+      min-width: 190px;
+    }
+    .roi-number {
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--emerald);
+      line-height: 1.1;
+    }
+    .roi-sub {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--navy-mid);
+      margin-top: 2px;
+    }
+    .net-pocket {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--navy);
+      margin-top: 4px;
+      background: #d1fae5;
+      border-radius: 6px;
+      padding: 2px 8px;
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .kpi-card {
+      background: var(--light);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--emerald);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .kpi-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--slate);
+      text-transform: uppercase;
+    }
+    .kpi-val {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--navy);
+      margin: 4px 0 2px;
+    }
+    .kpi-note {
+      font-size: 11px;
+      color: #64748b;
+    }
+    .math-equation-bar {
+      background: var(--navy);
+      color: #ffffff;
+      border-radius: 10px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .math-step {
+      display: flex;
+      flex-direction: column;
+    }
+    .math-step.highlight {
+      background: rgba(16, 185, 129, 0.18);
+      border: 1px solid #34d399;
+      padding: 8px 14px;
+      border-radius: 8px;
+    }
+    .m-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+    .m-val {
+      font-size: 18px;
+      font-weight: 800;
+      margin-top: 2px;
+    }
+    .m-val.pos { color: #6ee7b7; }
+    .m-val.fee { color: #fca5a5; }
+    .m-val.net { color: #34d399; font-size: 20px; }
+    .math-op {
+      font-size: 22px;
+      font-weight: 900;
+      color: #94a3b8;
+    }
+    .table-wrap {
+      overflow-x: auto;
+    }
+    .table-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+    th {
+      background: #f1f5f9;
+      color: var(--navy-mid);
+      text-align: left;
+      padding: 9px 10px;
+      border-bottom: 2px solid var(--border);
+      font-weight: 700;
+    }
+    td {
+      padding: 9px 10px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: middle;
+    }
+    .col-date { font-weight: 700; color: var(--slate); white-space: nowrap; }
+    .col-desc { color: var(--navy); max-width: 390px; }
+    .col-loc { white-space: nowrap; color: var(--slate); font-weight: 600; }
+    .col-amt { text-align: right; font-weight: 800; color: var(--emerald); white-space: nowrap; }
+    .cat-pill {
+      display: inline-block;
+      background: #e0f2fe;
+      color: #0369a1;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .status-badge {
+      display: inline-block;
+      background: var(--emerald-bg);
+      color: var(--emerald);
+      border: 1px solid #a7f3d0;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    tfoot td {
+      padding: 9px 10px;
+      font-weight: 700;
+    }
+    .row-gross td {
+      background: #f8fafc;
+      color: var(--navy);
+      border-top: 2px solid var(--border);
+    }
+    .row-fee td {
+      background: #fff1f2;
+      color: #9f1239;
+    }
+    .row-net td {
+      background: var(--emerald-bg);
+      color: var(--navy);
+      font-size: 14px;
+      font-weight: 900;
+      border-top: 2px solid var(--emerald);
+      border-bottom: 2px solid var(--emerald);
+    }
+    .stripe-cta-section {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #ffffff;
+      padding: 28px;
+      text-align: center;
+    }
+    .stripe-cta-section h3 {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .stripe-cta-section p {
+      font-size: 13.5px;
+      color: #cbd5e1;
+      max-width: 680px;
+      margin: 0 auto 18px;
+    }
+    .tier-selector-pills {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+    .tier-pill {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: #ffffff;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 700;
+    }
+    .tier-pill strong {
+      color: #6ee7b7;
+    }
+    .stripe-autopay-btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 800;
+      padding: 14px 30px;
+      border-radius: 10px;
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+      border: 2px solid #6ee7b7;
+      transition: transform 0.15s ease;
+    }
+    .stripe-autopay-btn:hover {
+      transform: translateY(-2px);
+    }
+    .security-footnote {
+      margin-top: 14px;
+      font-size: 11.5px;
+      color: #94a3b8;
+    }
+    @media (max-width: 760px) {
+      .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .math-equation-bar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .math-op {
+        display: none;
+      }
+    }
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .page-container {
+        box-shadow: none;
+        border: none;
+      }
+      .print-btn {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-container">
+    <header class="top-header">
+      <div class="brand-row">
+        <div class="shield-icon">MV</div>
+        <div class="brand-title">
+          <h1>MarginVault AI &mdash; Found-Money ROI Scorecard</h1>
+          <p>San Francisco, CA &bull; Automated Back-Office Profit &amp; POS Margin Shield</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <span class="guarantee-pill">3x MINIMUM ROI GUARANTEE: PASSED (12.4x ROI)</span>
+        <div class="header-date">Statement Generated: November 07, 2026 &bull; MarginVault AI Verified Audit</div>
+      </div>
+    </header>
+
+    <div class="intro-bar">
+      <div>
+        <strong>How to Read Your Day-14 / Monthly Scorecard:</strong> Below is every dollar of wholesale overcharges, POS margin creep, delivery chargebacks, and bake-sheet waste MarginVault AI caught for your store this cycle.
+      </div>
+      <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+    </div>
+
+    
+    <section class="scorecard-panel" id="store-card-1">
+      <div class="store-banner">
+        <div>
+          <div class="sample-tag">VERIFIED CLIENT PROFIT SCORECARD &bull; 3x MINIMUM ROI GUARANTEE PASSED</div>
+          <h2>Golden Gate Bakery Group [Sample]</h2>
+          <p class="store-meta"><strong>Owner:</strong> Carlos & Elena (3 San Francisco Locations) &nbsp;|&nbsp; <strong>Profile:</strong> 3-Store Bakery, Cafe & Morning Catering Group (Toast POS)</p>
+          <p class="store-meta"><strong>Active Charter Plan:</strong> Tier 3: Multi-Store Group Vault ($699/mo Founding Rate Lock) <span class="strike-rate">(Standard: $1,950/mo)</span></p>
+        </div>
+        <div class="roi-hero-badge">
+          <div class="roi-number">12.4x ROI</div>
+          <div class="roi-sub">Verified Return on Fee</div>
+          <div class="net-pocket">+$7,968.60 Net</div>
+        </div>
+      </div>
+
+      <!-- 4 Profit Recovery Pillars + Net Profit Summary -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">1. Wholesale Hikes Caught</div>
+          <div class="kpi-val">+$3,480.00</div>
+          <div class="kpi-note">POS Register &amp; Barcode Margin Restored</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">2. Cross-Store Credits Claimed</div>
+          <div class="kpi-val">+$1,410.00</div>
+          <div class="kpi-note">Vendor Price-Match &amp; 5-Case Post-Offs</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">3. DoorDash Chargebacks Won</div>
+          <div class="kpi-val">+$1,140.00</div>
+          <div class="kpi-note">Timestamp Disputes &amp; +22% Hedged Menu</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">4. 8 PM Bake-Sheet Waste Saved</div>
+          <div class="kpi-val">+$2,637.60</div>
+          <div class="kpi-note">Weather Prep Forecast &amp; Dead-Stock Shield</div>
+        </div>
+      </div>
+
+      <!-- The Undeniable Math Bar -->
+      <div class="math-equation-bar">
+        <div class="math-step">
+          <span class="m-label">Gross Found &amp; Protected Money</span>
+          <span class="m-val pos">+$8,667.60</span>
+        </div>
+        <div class="math-op">&minus;</div>
+        <div class="math-step">
+          <span class="m-label">Founding Store Fee ($199 / $399 / $699)</span>
+          <span class="m-val fee">-$699.00</span>
+        </div>
+        <div class="math-op">=</div>
+        <div class="math-step highlight">
+          <span class="m-label">NET PROFIT ADDED TO OWNER'S POCKET</span>
+          <span class="m-val net">+$7,968.60 (12.4x ROI)</span>
+        </div>
+      </div>
+
+      <!-- Itemized Verification Ledger -->
+      <div class="table-wrap">
+        <div class="table-title">Itemized Audit Trail &amp; Verified Profit Recovery Ledger (Last 30 Days)</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Recovery Pillar</th>
+              <th>Verified Invoice / POS / Delivery Action Taken</th>
+              <th>Location</th>
+              <th>Status</th>
+              <th style="text-align:right;">Monthly Impact</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+        <tr>
+          <td class="col-date">10/04</td>
+          <td><span class="cat-pill">Wholesale Hike Caught</span></td>
+          <td class="col-desc">BakeMark Unsalted Butter Block 30lb hiked +11.8% ($94.50 -> $105.65/case); updated 14 Toast pastry SKUs +$0.35</td>
+          <td class="col-loc">All 3 Stores</td>
+          <td><span class="status-badge">POS Updated</span></td>
+          <td class="col-amt">+$1,620.00</td>
+        </tr>
+        
+        <tr>
+          <td class="col-date">10/09</td>
+          <td><span class="cat-pill">Wholesale Hike Caught</span></td>
+          <td class="col-desc">Sysco Heavy Whipping Cream & Guittard Chocolate Chips silent +9.4% invoice creep caught; menu margin restored to 74%</td>
+          <td class="col-loc">All 3 Stores</td>
+          <td><span class="status-badge">POS Updated</span></td>
+          <td class="col-amt">+$1,860.00</td>
+        </tr>
+        
+        <tr>
+          <td class="col-date">10/14</td>
+          <td><span class="cat-pill">Cross-Store Credit</span></td>
+          <td class="col-desc">Store #3 billed $59.25/case for AA Large Eggs vs $54.00 contract rate at Store #1 (42 cases credited back by rep)</td>
+          <td class="col-loc">Store #3 (Mission)</td>
+          <td><span class="status-badge">Credit Issued</span></td>
+          <td class="col-amt">+$885.00</td>
+        </tr>
+        
+        <tr>
+          <td class="col-date">10/19</td>
+          <td><span class="cat-pill">Cross-Store Credit</span></td>
+          <td class="col-desc">Missing 5-case flour volume tier rebate & 3 shorted packaging sleeves claimed via SMS dispute template</td>
+          <td class="col-loc">Stores #1 & #2</td>
+          <td><span class="status-badge">Credit Issued</span></td>
+          <td class="col-amt">+$525.00</td>
+        </tr>
+        
+        <tr>
+          <td class="col-date">10/24</td>
+          <td><span class="cat-pill">DoorDash Chargebacks Won</span></td>
+          <td class="col-desc">34 unfair DoorDash & Uber Eats 'missing item' error deductions reversed using Toast kitchen ticket print timestamps</td>
+          <td class="col-loc">All 3 Stores</td>
+          <td><span class="status-badge">Payout Credited</span></td>
+          <td class="col-amt">+$1,140.00</td>
+        </tr>
+        
+        <tr>
+          <td class="col-date">10/30</td>
+          <td><span class="cat-pill">8 PM Bake-Sheet Saved</span></td>
+          <td class="col-desc">8:00 PM Weather-Adjusted 4 AM Bake-Sheet cut Tuesday/Wednesday stales by 38% & captured 2 rainy Sunday pastry spikes</td>
+          <td class="col-loc">All 3 Stores</td>
+          <td><span class="status-badge">Verified PMIX</span></td>
+          <td class="col-amt">+$2,637.60</td>
+        </tr>
+        
+          </tbody>
+          <tfoot>
+            <tr class="row-gross">
+              <td colspan="5">Total Gross Found &amp; Protected Profit This Month</td>
+              <td style="text-align:right;">+$8,667.60</td>
+            </tr>
+            <tr class="row-fee">
+              <td colspan="5">Less: MarginVault AI Founding Store Monthly Charter Fee (Locked-In Rate vs. $1,950/mo Standard)</td>
+              <td style="text-align:right;">-$699.00</td>
+            </tr>
+            <tr class="row-net">
+              <td colspan="5">NET PROFIT ADDED TO OWNER'S POCKET (12.4x VERIFIED ROI MULTIPLE)</td>
+              <td style="text-align:right;">+$7,968.60</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+    
+
+    <section class="scorecard-panel" id="store-card-2">
+      <div class="store-banner">
+        <div>
+          <div class="sample-tag">VERIFIED CLIENT PROFIT SCORECARD &bull; 3x MINIMUM ROI GUARANTEE PASSED</div>
+          <h2>Bayview Corner Spirits [Sample]</h2>
+          <p class="store-meta"><strong>Owner:</strong> Marco (Single-Store Type-21 Liquor & Corner Market) &nbsp;|&nbsp; <strong>Profile:</strong> 1-Store Liquor, Craft Beer & Neighborhood Convenience Market (Clover / NRG Scanner)</p>
+          <p class="store-meta"><strong>Active Charter Plan:</strong> Tier 2: Full Single-Store Vault ($399/mo Founding Rate Lock) <span class="strike-rate">(Standard: $950/mo)</span></p>
+        </div>
+        <div class="roi-hero-badge">
+          <div class="roi-number">12.4x ROI</div>
+          <div class="roi-sub">Verified Return on Fee</div>
+          <div class="net-pocket">+$4,548.60 Net</div>
+        </div>
+      </div>
+
+      <!-- 4 Profit Recovery Pillars + Net Profit Summary -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">1. Wholesale Hikes Caught</div>
+          <div class="kpi-val">+$1,840.00</div>
+          <div class="kpi-note">POS Register &amp; Barcode Margin Restored</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">2. Cross-Store Credits Claimed</div>
+          <div class="kpi-val">+$890.00</div>
+          <div class="kpi-note">Vendor Price-Match &amp; 5-Case Post-Offs</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">3. DoorDash Chargebacks Won</div>
+          <div class="kpi-val">+$1,696.60</div>
+          <div class="kpi-note">Timestamp Disputes &amp; +22% Hedged Menu</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">4. 8 PM Bake-Sheet Waste Saved</div>
+          <div class="kpi-val">+$521.00</div>
+          <div class="kpi-note">Weather Prep Forecast &amp; Dead-Stock Shield</div>
+        </div>
+      </div>
+
+      <!-- The Undeniable Math Bar -->
+      <div class="math-equation-bar">
+        <div class="math-step">
+          <span class="m-label">Gross Found &amp; Protected Money</span>
+          <span class="m-val pos">+$4,947.60</span>
+        </div>
+        <div class="math-op">&minus;</div>
+        <div class="math-step">
+          <span class="m-label">Founding Store Fee ($199 / $399 / $699)</span>
+          <span class="m-val fee">-$399.00</span>
+        </div>
+        <div class="math-op">=</div>
+        <div class="math-step highlight">
+          <span class="m-label">NET PROFIT ADDED TO OWNER'S POCKET</span>
+          <span class="m-val net">+$4,548.60 (12.4x ROI)</span>
+        </div>
+      </div>
+
+      <!-- Itemized Verification Ledger -->
+      <div class="table-wrap">
+        <div class="table-title">Itemized Audit Trail &amp; Verified Profit Recovery Ledger (Last 30 Days)</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Recovery Pillar</th>
+              <th>Verified Invoice / POS / Delivery Action Taken</th>
+              <th>Location</th>
+              <th>Status</th>
+              <th style="text-align:right;">Monthly Impact</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+        <tr>
+          <td class="col-date">10/06</td>
+          <td><span class="cat-pill">Wholesale Hike Caught</span></td>
+          <td class="col-desc">Southern Glazer's Reserve Reposado 750mL (+10.5%) & Imported Mezcal (+8.8%) barcode prices updated ($54.99 -> $63.99)</td>
+          <td class="col-loc">Main Register</td>
+          <td><span class="status-badge">Barcode Synced</span></td>
+          <td class="col-amt">+$1,120.00</td>
+        </tr>
+        
+        <tr>
+          <td class="col-date">10/12</td>
+          <td><span class="cat-pill">Wholesale Hike Caught</span></td>
+          <td class="col-desc">Reyes Beer 12-Pack Craft IPA & Mexican Lager case hike caught on paper invoice; shelf tags & UPC scanner updated</td>
+          <td class="col-loc">Cooler Doors 1-4</td>
+          <td><span class="status-badge">Barcode Synced</span></td>
+          <td class="col-amt">+$720.00</td>
+        </tr>
+        
+        <tr>
+          <td class="col-date">10/18</td>
+          <td><span class="cat-pill">Post-Off & Short Credit</span></td>
+          <td class="col-desc">Consolidated 3-case Vodka/Whiskey drop into 5-case California Post-Off tier (-$21/case) + 2 broken bottle driver credits</td>
+          <td class="col-loc">Receiving Dock</td>
+          <td><span class="status-badge">Credit Issued</span></td>
+          <td class="col-amt">+$890.00</td>
+        </tr>
+        
+        <tr>
+          <td class="col-date">10/25</td>
+          <td><span class="cat-pill">Delivery & Chargebacks Won</span></td>
+          <td class="col-desc">Commission-Hedged (+22%) DoorDash Alcohol menu preserved 100% in-store margin + 9 driver ID/return chargebacks won</td>
+          <td class="col-loc">DoorDash / UberEats</td>
+          <td><span class="status-badge">Payout Credited</span></td>
+          <td class="col-amt">+$1,696.60</td>
+        </tr>
+        
+        <tr>
+          <td class="col-date">10/30</td>
+          <td><span class="cat-pill">Dead-Stock & CRV Recovery</span></td>
+          <td class="col-desc">8:00 PM Friday/Game-Day chiller prep alert + slow-moving top-shelf bundle freed $1,900 cash & reconciled CRV/invoice fees</td>
+          <td class="col-loc">Backstock Vault</td>
+          <td><span class="status-badge">Verified POS</span></td>
+          <td class="col-amt">+$521.00</td>
+        </tr>
+        
+          </tbody>
+          <tfoot>
+            <tr class="row-gross">
+              <td colspan="5">Total Gross Found &amp; Protected Profit This Month</td>
+              <td style="text-align:right;">+$4,947.60</td>
+            </tr>
+            <tr class="row-fee">
+              <td colspan="5">Less: MarginVault AI Founding Store Monthly Charter Fee (Locked-In Rate vs. $950/mo Standard)</td>
+              <td style="text-align:right;">-$399.00</td>
+            </tr>
+            <tr class="row-net">
+              <td colspan="5">NET PROFIT ADDED TO OWNER'S POCKET (12.4x VERIFIED ROI MULTIPLE)</td>
+              <td style="text-align:right;">+$4,548.60</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+    
+
+    <!-- 1-Tap Stripe Auto-Pay Conversion Footer -->
+    <footer class="stripe-cta-section">
+      <h3>Your 14-Day Proof Pilot Exceeded Our 3x Guarantee by 413% (12.4x Verified ROI)</h3>
+      <p>
+        Keep your Founding Store Charter Rate locked in forever and your weekly SMS Invoice Watchdog, DoorDash Dispute Bot, and 8:00 PM Prep Forecaster running automatically. Month-to-month flexibility &mdash; cancel anytime with 15 days' text notice.
+      </p>
+      <div class="tier-selector-pills">
+        <div class="tier-pill">Tier 1 Starter: <strong>$199/mo</strong> (1 Store Invoice Watchdog)</div>
+        <div class="tier-pill">Tier 2 Full Single-Store: <strong>$399/mo</strong> (Bayview Spirits Sample)</div>
+        <div class="tier-pill">Tier 3 3-Store Group Vault: <strong>$699/mo</strong> (Golden Gate Bakery Sample)</div>
+      </div>
+      <a class="stripe-autopay-btn" href="https://buy.stripe.com/marginvault-founding-store-autopay" target="_blank" rel="noopener noreferrer">
+        &#128274; 1-Tap Activate Stripe / ACH Monthly Auto-Pay (Lock In Founding Rate) &rarr;
+      </a>
+      <div class="security-footnote">
+        5-Layer Security Protected &bull; Read-Only POS Advisory (Owner Retains 100% Register Control) &bull; Local PII &amp; ACH Firewall Active &bull; Questions? Text or email <strong>support@marginvaultai.com</strong>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

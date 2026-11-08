@@ -1,0 +1,2674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MarginVault AI — Founder Web Admin Command Center</title>
+<script id="mvTelemetryScript">
+  window.__MV_APP_NAME = 'marginvault_admin';
+  (function() {
+    if (window.mvTelemetry && window.mvTelemetry.__initialized) return;
+
+    var APP_NAME = window.__MV_APP_NAME || 'marginvault_admin';
+    var memorySessionId = null;
+    function getSessionId() {
+      try {
+        var sid = sessionStorage.getItem('mv_session_id');
+        if (!sid) {
+          sid = 'sess_' + Date.now() + '_' + Math.random().toString(16).substring(2, 8);
+          sessionStorage.setItem('mv_session_id', sid);
+        }
+        return sid;
+      } catch (e) {
+        if (!memorySessionId) {
+          memorySessionId = 'sess_' + Date.now() + '_' + Math.random().toString(16).substring(2, 8);
+        }
+        return memorySessionId;
+      }
+    }
+
+    var memoryEvents = [];
+    var memoryErrors = [];
+    var MAX_EVENTS = 100;
+    var MAX_ERRORS = 50;
+
+    function safeStorageGet(key, defaultVal) {
+      try {
+        var val = localStorage.getItem(key);
+        if (!val) return defaultVal;
+        var parsed = JSON.parse(val);
+        return Array.isArray(parsed) ? parsed : defaultVal;
+      } catch (e) {
+        return defaultVal;
+      }
+    }
+
+    function safeStorageSet(key, items, maxCount) {
+      try {
+        while (items.length > maxCount) {
+          items.shift();
+        }
+        localStorage.setItem(key, JSON.stringify(items));
+      } catch (e) {
+        try {
+          if (items.length > 4) {
+            items = items.slice(Math.floor(items.length / 2));
+            localStorage.setItem(key, JSON.stringify(items));
+          }
+        } catch (innerErr) {
+          if (key === 'mv_telemetry_events') memoryEvents = items;
+          if (key === 'mv_telemetry_errors') memoryErrors = items;
+        }
+      }
+    }
+
+    var isStaticHost = (function() {
+      try {
+        var proto = window.location.protocol;
+        var host = window.location.hostname;
+        return proto === 'file:' || (host && host.indexOf('github.io') !== -1);
+      } catch (e) {
+        return false;
+      }
+    })();
+
+    function asyncPost(endpoint, payload) {
+      if (isStaticHost) return Promise.resolve(null);
+      if (typeof fetch !== 'function') return Promise.resolve(null);
+
+      var controller = null;
+      var signal = null;
+      var timer = null;
+      if (typeof AbortController === 'function') {
+        controller = new AbortController();
+        signal = controller.signal;
+        timer = setTimeout(function() {
+          try { controller.abort(); } catch (e) {}
+        }, 1500);
+      }
+
+      return fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        keepalive: true,
+        signal: signal
+      }).then(function(resp) {
+        if (timer) clearTimeout(timer);
+        return resp;
+      }).catch(function() {
+        if (timer) clearTimeout(timer);
+        return null;
+      });
+    }
+
+    function track(eventType, metadata) {
+      try {
+        var evtType = eventType;
+        var meta = metadata || {};
+        if (typeof eventType === 'object' && eventType !== null) {
+          evtType = eventType.event_type || eventType.type || 'custom_event';
+          meta = eventType.metadata || eventType.details || eventType;
+        }
+        var now = Date.now();
+        var evt = {
+          event_id: 'evt_' + now + '_' + Math.random().toString(16).substring(2, 8),
+          timestamp: new Date(now).toISOString(),
+          epoch_ms: now,
+          app_name: APP_NAME,
+          event_type: evtType,
+          session_id: getSessionId(),
+          url: window.location.href,
+          metadata: meta
+        };
+
+        var events = safeStorageGet('mv_telemetry_events', memoryEvents);
+        events.push(evt);
+        safeStorageSet('mv_telemetry_events', events, MAX_EVENTS);
+
+        asyncPost('/api/telemetry', { events: [evt], ...evt });
+        return evt;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    var isLoggingError = false;
+    function logError(source, err, context, severity) {
+      if (isLoggingError) return;
+      isLoggingError = true;
+      try {
+        var now = Date.now();
+        var errMsg = 'Unknown error';
+        var errType = 'Error';
+        var stack = '';
+        var lineNo = null;
+        var colNo = null;
+
+        if (err) {
+          if (typeof err === 'string') {
+            errMsg = err;
+          } else if (err instanceof Error) {
+            errMsg = err.message || err.toString();
+            errType = err.name || 'Error';
+            stack = err.stack || '';
+          } else if (typeof err === 'object') {
+            try {
+              errMsg = err.message || JSON.stringify(err);
+              if (err.name) errType = err.name;
+              if (err.stack) stack = err.stack;
+              if (err.lineno) lineNo = err.lineno;
+              if (err.colno) colNo = err.colno;
+            } catch (ex) {
+              errMsg = String(err);
+            }
+          }
+        }
+
+        if (context && typeof context === 'object') {
+          if (context.lineno != null && lineNo == null) lineNo = context.lineno;
+          if (context.colno != null && colNo == null) colNo = context.colno;
+          if (context.filename && !stack) stack = context.filename + (lineNo ? ':' + lineNo : '');
+        }
+
+        var errObj = {
+          error_id: 'err_' + now + '_' + Math.random().toString(16).substring(2, 8),
+          timestamp: new Date(now).toISOString(),
+          epoch_ms: now,
+          source_app: source || APP_NAME,
+          error_message: String(errMsg),
+          error_type: String(errType),
+          stack_trace: String(stack),
+          url: window.location.href,
+          line_number: typeof lineNo === 'number' ? lineNo : null,
+          column_number: typeof colNo === 'number' ? colNo : null,
+          severity: severity || 'ERROR',
+          session_id: getSessionId(),
+          context: context || {}
+        };
+
+        var errors = safeStorageGet('mv_telemetry_errors', memoryErrors);
+        errors.push(errObj);
+        safeStorageSet('mv_telemetry_errors', errors, MAX_ERRORS);
+
+        asyncPost('/api/telemetry', { errors: [errObj], ...errObj });
+        return errObj;
+      } catch (e) {
+      } finally {
+        isLoggingError = false;
+      }
+    }
+
+    window.addEventListener('error', function(event) {
+      try {
+        var msg = event.message || 'Script error.';
+        var err = event.error || msg;
+        logError(APP_NAME, err, {
+          filename: event.filename,
+          lineno: event.lineno,
+          colno: event.colno,
+          type: 'window.onerror'
+        }, 'ERROR');
+      } catch (e) {}
+    });
+
+    window.addEventListener('unhandledrejection', function(event) {
+      try {
+        var reason = event.reason;
+        var msg = 'Unhandled Promise Rejection';
+        if (reason) {
+          if (reason instanceof Error) {
+            msg = reason.message;
+          } else if (typeof reason === 'string') {
+            msg = reason;
+          } else {
+            try { msg = JSON.stringify(reason); } catch (e) { msg = String(reason); }
+          }
+        }
+        logError(APP_NAME, reason || msg, {
+          type: 'unhandledrejection',
+          rawReason: typeof reason === 'string' ? reason : (reason && reason.name)
+        }, 'ERROR');
+      } catch (e) {}
+    });
+
+    if (typeof window.fetch === 'function') {
+      var originalFetch = window.fetch;
+      window.fetch = function() {
+        var args = arguments;
+        var url = (args && args[0]) ? (typeof args[0] === 'string' ? args[0] : (args[0].url || '')) : '';
+
+        if (url.indexOf('/api/telemetry') !== -1) {
+          return originalFetch.apply(this, args);
+        }
+
+        return originalFetch.apply(this, args).then(function(response) {
+          if (response && !response.ok && response.status >= 400) {
+            logError(APP_NAME, 'HTTP ' + response.status + ' on ' + url, {
+              type: 'fetch_error',
+              status: response.status,
+              statusText: response.statusText,
+              url: url
+            }, response.status >= 500 ? 'ERROR' : 'WARNING');
+          }
+          return response;
+        }).catch(function(netErr) {
+          logError(APP_NAME, netErr, {
+            type: 'fetch_network_failure',
+            url: url
+          }, 'ERROR');
+          throw netErr;
+        });
+      };
+    }
+
+    function sendPageView() {
+      try {
+        track('page_view', {
+          title: document.title,
+          referrer: document.referrer || '',
+          screen_width: window.innerWidth || screen.width,
+          user_agent: navigator.userAgent
+        });
+      } catch (e) {}
+    }
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      setTimeout(sendPageView, 1);
+    } else {
+      window.addEventListener('DOMContentLoaded', sendPageView);
+    }
+
+    window.mvTelemetry = {
+      __initialized: true,
+      appName: APP_NAME,
+      track: track,
+      logError: logError,
+      getSessionId: getSessionId,
+      getEvents: function() { return safeStorageGet('mv_telemetry_events', memoryEvents); },
+      getErrors: function() { return safeStorageGet('mv_telemetry_errors', memoryErrors); },
+      clearLocal: function() {
+        try {
+          localStorage.removeItem('mv_telemetry_events');
+          localStorage.removeItem('mv_telemetry_errors');
+          memoryEvents = [];
+          memoryErrors = [];
+        } catch (e) {}
+      }
+    };
+  })();
+</script>
+<style>
+  :root {
+    --navy: #0f172a;
+    --navy-light: #1e293b;
+    --emerald: #059669;
+    --emerald-bright: #10b981;
+    --emerald-bg: #ecfdf5;
+    --blue: #2563eb;
+    --amber: #d97706;
+    --amber-bg: #fffbeb;
+    --slate: #475569;
+    --border: #e2e8f0;
+    --bg: #f1f5f9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Inter, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--navy);
+    line-height: 1.5;
+  }
+
+  /* FEATURE A: Founder Passcode / Security Lock Screen Overlay */
+  .lock-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .lock-overlay.hidden {
+    display: none;
+  }
+  /* SVG Icon Utilities */
+  .mv-icon {
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.15em;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    display: inline-block;
+    margin-right: 0.35rem;
+    flex-shrink: 0;
+  }
+  .mv-icon-hero {
+    vertical-align: middle;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    display: block;
+    margin: 0 auto 8px auto;
+  }
+
+  .lock-card {
+    background: #1e293b;
+    border: 1.5px solid #334155;
+    border-top: 4px solid var(--emerald-bright);
+    border-radius: 16px;
+    max-width: 440px;
+    width: 100%;
+    padding: 32px 28px;
+    color: #f8fafc;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65);
+    text-align: center;
+  }
+  .lock-card h2 {
+    margin: 10px 0 6px 0;
+    font-size: 22px;
+    font-weight: 800;
+  }
+  .lock-card p {
+    margin: 0 0 20px 0;
+    font-size: 13.5px;
+    color: #94a3b8;
+  }
+  .lock-input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1.5px solid #475569;
+    background: #0f172a;
+    color: #fff;
+    font-size: 15px;
+    font-family: Consolas, monospace;
+    text-align: center;
+    margin-bottom: 14px;
+  }
+  .lock-input:focus {
+    outline: none;
+    border-color: var(--emerald-bright);
+  }
+  .lock-error {
+    display: none;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid #ef4444;
+    color: #fca5a5;
+    font-size: 12.5px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+  }
+
+  /* Top Admin Navbar */
+  .topbar {
+    background: var(--navy);
+    color: #fff;
+    padding: 14px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid var(--emerald-bright);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 20px;
+    font-weight: 800;
+  }
+  .brand span.green { color: #34d399; }
+  .badge-admin {
+    background: rgba(16, 185, 129, 0.2);
+    border: 1px solid #34d399;
+    color: #34d399;
+    font-size: 11.5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .top-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 13px;
+    flex-wrap: wrap;
+  }
+  .status-dot {
+    width: 9px;
+    height: 9px;
+    background: #34d399;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+  }
+  .btn {
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+    transition: 0.15s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-emerald { background: var(--emerald); color: #fff; }
+  .btn-emerald:hover { background: #047857; }
+  .btn-blue { background: var(--blue); color: #fff; }
+  .btn-blue:hover { background: #1d4ed8; }
+  .btn-amber { background: #d97706; color: #fff; }
+  .btn-amber:hover { background: #b45309; }
+  .btn-navy { background: var(--navy-light); color: #fff; border: 1px solid #334155; }
+  .btn-navy:hover { background: #334155; }
+  .btn-outline { background: #fff; color: var(--navy); border: 1px solid #cbd5e1; }
+  .btn-outline:hover { background: #f8fafc; }
+
+  /* Layout Container */
+  .container {
+    max-width: 1360px;
+    margin: 24px auto;
+    padding: 0 24px;
+  }
+
+  /* KPI Strip */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+  }
+  .kpi-label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--slate);
+    letter-spacing: 0.5px;
+  }
+  .kpi-val {
+    font-size: 28px;
+    font-weight: 800;
+    margin: 4px 0;
+    color: var(--navy);
+  }
+  .kpi-val.green { color: var(--emerald); }
+  .kpi-sub { font-size: 12.5px; color: var(--slate); }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    background: #fff;
+    border: 1px solid var(--border);
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--slate);
+    cursor: pointer;
+  }
+  .tab-btn.active {
+    background: var(--navy);
+    color: #fff;
+    border-color: var(--navy);
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Cards & Grid */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1.55fr 1fr;
+    gap: 22px;
+  }
+  .panel-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+    margin-bottom: 22px;
+  }
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .panel-header h2 {
+    margin: 0;
+    font-size: 18px;
+  }
+
+  /* Incoming MMS Queue Item */
+  .mms-item {
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+    background: #f8fafc;
+  }
+  .mms-item.sent {
+    border-color: #10b981;
+    background: #f0fdf4;
+  }
+  .mms-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 13px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .phone-pill {
+    background: var(--navy);
+    color: #38bdf8;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-family: Consolas, monospace;
+    font-weight: 700;
+  }
+  .pii-badge {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #f59e0b;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+  .sms-preview-box {
+    background: #0f172a;
+    color: #f8fafc;
+    font-family: Consolas, monospace;
+    font-size: 12.5px;
+    padding: 14px;
+    border-radius: 8px;
+    margin: 10px 0 12px 0;
+    white-space: pre-wrap;
+    border-left: 4px solid #10b981;
+  }
+  .mms-action-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px dashed #cbd5e1;
+  }
+  .direct-action-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* Forms & Tables */
+  label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--navy);
+  }
+  input[type="text"], input[type="tel"], input[type="password"], select, textarea {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    margin-bottom: 12px;
+    font-size: 13.5px;
+    font-family: inherit;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    background: var(--navy);
+    color: #fff;
+    text-align: left;
+    padding: 10px 12px;
+  }
+  td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .toggle-pill {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 800;
+    cursor: pointer;
+    border: none;
+  }
+  .toggle-pill.on { background: #d1fae5; color: #065f46; }
+  .toggle-pill.off { background: #e2e8f0; color: #475569; }
+
+  .toast-banner {
+    display: none;
+    background: var(--emerald);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  @media (max-width: 980px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .main-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Inline SVG Utilities */
+  .mv-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    vertical-align: -2px;
+    margin-right: 6px;
+    flex-shrink: 0;
+  }
+  /* TAB 4: FOUNDER ACTIVITY MONITORING & TELEMETRY STYLES */
+  .telemetry-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 20px;
+    background: #fff;
+    padding: 16px 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  .telemetry-toolbar-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .telemetry-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .telemetry-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+  .badge-cloud {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #10b981;
+  }
+  .badge-local {
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #f59e0b;
+  }
+  .range-group {
+    display: inline-flex;
+    gap: 6px;
+  }
+  .range-btn {
+    padding: 6px 12px;
+    font-size: 12.5px;
+  }
+  .range-btn.active {
+    background: var(--navy);
+    color: #fff;
+    border-color: var(--navy);
+  }
+  .health-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+  .health-clean {
+    background: #d1fae5;
+    color: #065f46;
+  }
+  .health-warn {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  .health-error {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  .clean-health-banner {
+    background: #ecfdf5;
+    border: 1.5px solid #10b981;
+    border-radius: 10px;
+    padding: 18px 22px;
+    color: #065f46;
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .app-breakdown-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 14px;
+  }
+  .app-stat-card {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    border-top: 3px solid var(--emerald-bright);
+  }
+  .app-stat-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .app-stat-num {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--navy);
+    margin-bottom: 4px;
+  }
+  .app-stat-detail {
+    font-size: 12px;
+    color: var(--slate);
+    line-height: 1.4;
+  }
+  .telemetry-table-wrapper {
+    overflow-x: auto;
+    max-height: 480px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .sev-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-family: Consolas, monospace;
+  }
+  .sev-error {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #ef4444;
+  }
+  .sev-warning {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #f59e0b;
+  }
+  .sev-info {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #38bdf8;
+  }
+  @media (max-width: 980px) {
+    .app-breakdown-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .app-breakdown-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- FEATURE A: FOUNDER PASSCODE / SECURITY LOCK OVERLAY -->
+<div id="founderLockOverlay" class="lock-overlay">
+  <div class="lock-card">
+    <svg class="mv-icon-hero" width="40" height="40" viewBox="0 0 24 24" stroke="#34d399" stroke-width="1.75" fill="none" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <h2>Margin<span style="color:#34d399;">Vault</span> AI — Founder Lock</h2>
+    <p>Protected San Francisco Command Center (`admin.html`). Enter your Founder Passcode or Email to unlock:</p>
+    <div id="lockErrorBox" class="lock-error">Invalid passcode. Use your Founder PIN (`vault2026`) or email (`runnerman12@gmail.com`).</div>
+    <form onsubmit="unlockFounderAdmin(event)">
+      <input type="password" id="founderPasscodeInput" class="lock-input" placeholder="Enter Founder PIN or Email..." autocomplete="current-password" required>
+      <button type="submit" class="btn btn-emerald" style="width:100%; justify-content:center; padding:12px; font-size:14.5px;"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>Unlock Founder Admin</button>
+    </form>
+    <div style="margin-top:14px; font-size:12px; color:#64748b;">
+      Default Founder PIN: <code style="color:#38bdf8; cursor:pointer;" onclick="document.getElementById('founderPasscodeInput').value='vault2026'">vault2026</code> &bull;
+      Session-protected via <code>sessionStorage</code>
+    </div>
+  </div>
+</div>
+
+<!-- TOP ADMIN BAR -->
+<header class="topbar">
+  <div class="brand">
+    <span>Margin<span class="green">Vault</span> AI</span>
+    <span class="badge-admin">Founder Web Admin Command Center</span>
+  </div>
+  <div class="top-actions">
+    <span><span class="status-dot"></span>24/7 Cloud DB &amp; PII Firewall: <strong id="cloudStatusText">ONLINE</strong></span>
+    <span>|</span>
+    <span>Cloud AI Spend: <strong style="color:#34d399;">$0.04 / $10.00 Cap</strong></span>
+    <button onclick="downloadCloudBackup()" class="btn btn-navy" style="cursor:pointer;"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download Cloud Backup</button>
+    <a href="snap.html" target="_blank" class="btn btn-emerald" title="Open 100% In-House Client 1-Tap Smartphone Camera App"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>Open Snap App &nearr;</a>
+    <a href="index.html" target="_blank" class="btn btn-navy">View Public Website &nearr;</a>
+    <button onclick="lockFounderAdmin()" class="btn btn-outline" style="background:#1e293b; color:#fca5a5; border-color:#ef4444;" title="Lock Admin Screen"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Lock Admin Console</button>
+  </div>
+</header>
+
+<div class="container">
+  <div id="toastBanner" class="toast-banner"></div>
+
+  <!-- KPI SUMMARY BAR -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Active Client Accounts</div>
+      <div class="kpi-val" id="kpiClients">3 Clients (5 Stores)</div>
+      <div class="kpi-sub">Auto-matched via Caller-ID Registry</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Monthly Recurring Revenue (MRR)</div>
+      <div class="kpi-val green" id="kpiMrr">$1,297 / mo</div>
+      <div class="kpi-sub">Founding Charter Cohort ($199 / $399 / $699)</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Client Profit Protected (This Week)</div>
+      <div class="kpi-val green" id="kpiFound">+$1,608.10</div>
+      <div class="kpi-sub">12.4x Average Client ROI</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">PII &amp; Banking Secrets Redacted</div>
+      <div class="kpi-val" id="kpiPii">6 Redacted</div>
+      <div class="kpi-sub">100% Air-Gapped Local Python Math</div>
+    </div>
+  </div>
+
+  <!-- NAVIGATION TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('tab-inbox', this)">Live Invoice Inbox</button>
+    <button class="tab-btn" onclick="switchTab('tab-clients', this)">Client Store Registry</button>
+    <button class="tab-btn" onclick="switchTab('tab-simulator', this)">Live Invoice Simulator</button>
+    <button class="tab-btn" onclick="switchTab('tab-monitoring', this)"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Activity Monitoring</button>
+  </div>
+
+  <!-- TAB 1: LIVE MMS INVOICE INBOX & 1-CLICK APPROVAL -->
+  <div id="tab-inbox" class="tab-panel active">
+    <div class="main-grid">
+      <div class="panel-card">
+        <div class="panel-header">
+          <h2>Incoming Client Invoice Photos (Auto-Routed by Sender Phone #)</h2>
+          <button class="btn btn-emerald" onclick="approveAllSms()"><svg class="mv-icon" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Approve All SMS</button>
+        </div>
+        <div id="mmsQueueContainer"></div>
+      </div>
+
+      <div>
+        <div class="panel-card">
+          <div class="panel-header">
+            <h2>100% In-House Zero-Twilio Fulfillment (Snap App + Native SMS)</h2>
+          </div>
+          <ol style="padding-left:18px; font-size:13.5px; color:#334155; line-height:1.65; margin:0;">
+            <li style="margin-bottom:8px;"><strong>1-Tap Client Snap App (`snap.html?store=&lt;slug&gt;`):</strong> Every store gets a dedicated, zero-password mobile camera URL (<code>[Copy Snap Link]</code> in Tab 2). Every invoice photo they snap lands at the top of this inbox immediately!</li>
+            <li style="margin-bottom:8px;"><strong>Instant Native Phone SMS:</strong> Tap <strong>Open Phone SMS</strong> or <strong>Copy SMS Text</strong> on any card to text the client straight from your iPhone/Mac/PC in 1 click—zero carrier registration delays or fees!</li>
+            <li style="margin-bottom:8px;"><strong>1-Click Vendor Credit Claim:</strong> Launches your email client (Outlook / Mail) pre-populated with the exact SKU invoice credit memo request.</li>
+            <li><strong>PII Firewall + Barcode Math:</strong> Strips ACH/FEIN numbers locally, compares invoice costs against that store's <code>pos_baseline.csv</code>, and drafts the SMS reply on the left.</li>
+          </ol>
+        </div>
+
+        <div class="panel-card" style="background:var(--navy); color:#fff;">
+          <h3 style="margin:0 0 8px 0; font-size:16px; color:#34d399;">Quick Terminal / Cloud Server Sync</h3>
+          <p style="font-size:12.5px; color:#cbd5e1; margin:0 0 10px 0;">This admin dashboard syncs live across tabs (`index.html` &harr; `snap.html` &harr; `admin.html`) via `localStorage` and connects to your 24/7 Python server &amp; Vision OCR engine:</p>
+          <code style="display:block; background:#090d16; color:#38bdf8; padding:10px; border-radius:6px; font-size:12px; margin-bottom:6px;">python marginvault-sf/cloud_app.py</code>
+          <code style="display:block; background:#090d16; color:#34d399; padding:10px; border-radius:6px; font-size:12px;">python marginvault-sf/real_invoice_vision_ocr.py --self-test</code>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: CLIENT PHONE REGISTRY, ADD NEW STORE & FEATURE D: POS BASELINE CSV VIEWER/IMPORT -->
+  <div id="tab-clients" class="tab-panel">
+    <div class="main-grid">
+      <div>
+        <div class="panel-card">
+          <div class="panel-header">
+            <h2>Active Client Phone Registry (`client_phone_registry.json`)</h2>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Caller-ID Phone #</th>
+                <th>Store / Business Name</th>
+                <th>Owner</th>
+                <th>Plan Tier</th>
+                <th>In-House Snap Link + Native SMS</th>
+              </tr>
+            </thead>
+            <tbody id="clientTableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- FEATURE D: POS BASELINE CSV IMPORT / VIEWER IN TAB 2 -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h2>Store POS Baseline SKU Viewer &amp; CSV Importer (`pos_baseline.csv`)</h2>
+            <button type="button" class="btn btn-outline" onclick="exportSelectedPosBaselineCsv()"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export Store CSV</button>
+          </div>
+          <p style="font-size:13px; color:#475569; margin:0 0 12px 0;">
+            Select a client store below to inspect, paste, or upload its baseline case costs and register barcode prices. Tab 3's Live Simulator audits incoming invoices directly against this store catalog!
+          </p>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; align-items:end; margin-bottom:8px;">
+            <div>
+              <label for="posStoreSelect">1. Select Client Store Vault</label>
+              <select id="posStoreSelect" onchange="renderPosBaselineViewer()"></select>
+            </div>
+            <div>
+              <label for="posCsvFileInput">2. Import / Upload `pos_baseline.csv` File</label>
+              <input type="file" id="posCsvFileInput" accept=".csv,.txt" onchange="handlePosCsvFileUpload(event)" style="margin-bottom:12px; font-size:12.5px;">
+            </div>
+          </div>
+
+          <div style="overflow-x:auto; margin-bottom:14px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>SKU_ID</th>
+                  <th>Item_Name</th>
+                  <th>Units/Cs</th>
+                  <th>Baseline Cost</th>
+                  <th>POS Price</th>
+                  <th>Target Margin</th>
+                  <th>Wkly Cases</th>
+                </tr>
+              </thead>
+              <tbody id="posBaselineTableBody"></tbody>
+            </table>
+          </div>
+
+          <label for="posBaselineCsvEditor">Paste or Edit Raw Store `pos_baseline.csv` Rows (Live Sync with Tab 3 Auditor)</label>
+          <textarea id="posBaselineCsvEditor" rows="5" style="font-family:Consolas,monospace; font-size:12px; background:#f8fafc;"></textarea>
+          <button type="button" class="btn btn-emerald" onclick="savePosBaselineFromEditor()" style="width:100%; justify-content:center;">
+            <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save POS Baseline
+          </button>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-header">
+          <h2>+ Add New Client Store Vault (60 Secs)</h2>
+        </div>
+        <form onsubmit="addNewClient(event)">
+          <label>Owner Cell Phone # (Used for Automatic Photo Routing)</label>
+          <input type="tel" id="ncPhone" required placeholder="+14155550142">
+
+          <label>Store / Restaurant / Bakery Name</label>
+          <input type="text" id="ncBiz" required placeholder="e.g., Universal Bakery Inc. (3 Stores)">
+
+          <label>Owner / Manager Name(s)</label>
+          <input type="text" id="ncOwner" required placeholder="e.g., Dave &amp; Jorge">
+
+          <label>Founding Charter Plan Tier</label>
+          <select id="ncTier" data-fee="699">
+            <option value="Tier 1 ($199/mo Starter Watchdog)" data-fee="199">Tier 1: $199/mo Starter Watchdog</option>
+            <option value="Tier 2 ($399/mo Full Single-Store Vault)" data-fee="399">Tier 2: $399/mo Full Single-Store Vault</option>
+            <option value="Tier 3 ($699/mo 3-Store Group Vault)" data-fee="699" selected>Tier 3: $699/mo 3-Store Group Vault ($233/store)</option>
+          </select>
+
+          <label>Reply Mode</label>
+          <select id="ncAuto">
+            <option value="false">1-Click Founder Approval in Admin UI (Recommended)</option>
+            <option value="true">100% Lights-Out Auto-Pilot (Instant SMS Reply)</option>
+          </select>
+
+          <button type="submit" class="btn btn-emerald" style="width:100%; justify-content:center; margin-top:6px;">Create Client Vault</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: LIVE INVOICE PHOTO / OCR SIMULATOR (FEATURE C: REAL FILE UPLOAD & DYNAMIC PRICE MATH) -->
+  <div id="tab-simulator" class="tab-panel">
+    <div class="main-grid">
+      <div class="panel-card">
+        <div class="panel-header">
+          <h2>Test / Simulate an Incoming Client Invoice</h2>
+        </div>
+        <form onsubmit="simulateIncomingInvoice(event)">
+          <label for="simPhone">Select Sending Client Phone Number</label>
+          <select id="simPhone"></select>
+
+          <label for="simFile">Upload Invoice File (`.txt`, `.csv`, `.jpg`, `.png`, `.pdf`) — Auto-Loads via `FileReader`</label>
+          <input type="file" id="simFile" accept=".txt,.csv,.jpg,.jpeg,.png,.pdf" onchange="handleSimFileUpload(event)" style="margin-bottom:8px; font-size:13px;">
+          <div id="simFileStatusBox" style="display:none; background:#eff6ff; border:1px solid #93c5fd; color:#1e40af; padding:8px 12px; border-radius:6px; font-size:12.5px; margin-bottom:10px;"></div>
+
+          <label for="simText">Invoice Text / OCR Payload (Try Changing Any Dollar Price or Case Count Below!)</label>
+          <textarea id="simText" rows="7" style="font-family:Consolas,monospace; font-size:12.5px;">SYSCO SF DELIVERY INVOICE #99412 | Payment ACH Routing: 121000358 | FEIN: 94-3829104
+SKU-101 Large AA Shell Eggs (15-Doz) — 14 cases @ $60.50/cs (Store #1 price: $54.00/cs)
+SKU-102 Sweet Cream Butter (36-lb) — 8 cases @ $74.25/cs (Previous baseline: $68.00/cs)</textarea>
+
+          <button type="submit" class="btn btn-emerald" style="width:100%; justify-content:center;">Run Audit Engine &rarr;</button>
+        </form>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-header">
+          <h2>Live Dynamic Audit &amp; SMS Output Preview</h2>
+        </div>
+        <div id="simResultBox" style="font-size:13.5px; color:var(--slate);">
+          Click <strong>"Run Dynamic Auto-Router, PII Scrubber &amp; Barcode Auditor"</strong> on the left (or upload a file / edit any dollar figure in the box) to watch the engine dynamically calculate cross-store credits, wholesale hikes, and barcode updates from the exact numbers entered.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: FOUNDER ACTIVITY MONITORING & TELEMETRY DASHBOARD -->
+  <div id="tab-monitoring" class="tab-panel">
+    <!-- TOOLBAR WITH RANGE FILTERS, DUAL-MODE BADGE, AND ACTION CONTROLS -->
+    <div class="telemetry-toolbar">
+      <div class="telemetry-toolbar-left">
+        <h2 style="margin:0 0 4px 0; font-size:18px;">Founder Activity Monitoring &amp; Telemetry Stream</h2>
+        <div style="font-size:12.5px; color:var(--slate); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span>Live real-time operational metrics across Landing, Snap, GateKeeper &amp; Founder Admin.</span>
+          <span id="telemetryModeBadge" class="telemetry-badge badge-cloud"><span class="status-dot"></span>Live Cloud Stream</span>
+          <span id="telemetryLastSync" style="font-size:12px; color:var(--slate);">Updated just now</span>
+        </div>
+      </div>
+      <div class="telemetry-toolbar-right">
+        <div class="range-group">
+          <button type="button" class="btn btn-outline range-btn active" data-range="today" onclick="changeTelemetryRange('today', this)">Filter Today</button>
+          <button type="button" class="btn btn-outline range-btn" data-range="7d" onclick="changeTelemetryRange('7d', this)">Filter 7 Days</button>
+          <button type="button" class="btn btn-outline range-btn" data-range="all" onclick="changeTelemetryRange('all', this)">Filter All Time</button>
+        </div>
+        <button type="button" class="btn btn-navy" onclick="refreshTelemetry()"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Refresh Telemetry</button>
+        <button type="button" class="btn btn-outline" onclick="exportTelemetryJson()"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export Telemetry JSON</button>
+        <button type="button" class="btn btn-outline" style="color:#ef4444; border-color:#fca5a5;" onclick="clearTelemetryLogs()"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Clear Local Logs</button>
+      </div>
+    </div>
+
+    <!-- TELEMETRY KPI SUMMARY STRIP -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Page Views</div>
+        <div class="kpi-val" id="telemetryKpiViews">0</div>
+        <div class="kpi-sub" id="telemetryKpiViewsBreakdown">0 landing &bull; 0 snap &bull; 0 gatekeeper &bull; 0 admin</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Core App Actions</div>
+        <div class="kpi-val green" id="telemetryKpiActions">0</div>
+        <div class="kpi-sub" id="telemetryKpiActionsBreakdown">0 snaps &bull; 0 unlocks &bull; 0 signups &bull; 0 calcs</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Active Stores &amp; Sessions</div>
+        <div class="kpi-val" id="telemetryKpiSessions">0 Sessions</div>
+        <div class="kpi-sub" id="telemetryKpiStores">0 distinct client store slugs</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">System Health &amp; Error Rate</div>
+        <div class="kpi-val" id="telemetryKpiErrors">0 Errors</div>
+        <div class="kpi-sub" id="telemetryKpiHealthStatus"><span class="health-pill health-clean">Clean System Health</span></div>
+      </div>
+    </div>
+
+    <!-- CORE APP USAGE BREAKDOWN -->
+    <div class="panel-card">
+      <div class="panel-header">
+        <h2>Core App Usage Breakdown (Cross-Application Funnel)</h2>
+      </div>
+      <div class="app-breakdown-grid">
+        <div class="app-stat-card">
+          <div class="app-stat-title">
+            <svg class="mv-icon" viewBox="0 0 24 24" stroke="#059669" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+            Snap Invoice Camera App
+          </div>
+          <div class="app-stat-num" id="telemetryBreakdownSnaps">0</div>
+          <div class="app-stat-detail">Invoice camera capture events, offline cooler queue syncs &amp; downsample actions in <code>snap.html</code>.</div>
+        </div>
+        <div class="app-stat-card">
+          <div class="app-stat-title">
+            <svg class="mv-icon" viewBox="0 0 24 24" stroke="#2563eb" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            NightDrop &amp; GateKeeper
+          </div>
+          <div class="app-stat-num" id="telemetryBreakdownGatekeeper">0</div>
+          <div class="app-stat-detail">NightDrop vendor QR scans, electric strike door unlocks &amp; autonomous courier chimes in <code>gatekeeper.html</code>.</div>
+        </div>
+        <div class="app-stat-card">
+          <div class="app-stat-title">
+            <svg class="mv-icon" viewBox="0 0 24 24" stroke="#d97706" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            ROI Calculator &amp; Signups
+          </div>
+          <div class="app-stat-num" id="telemetryBreakdownIndex">0</div>
+          <div class="app-stat-detail">Wholesale overcharge savings simulations &amp; 60-second pilot store registrations on <code>index.html</code>.</div>
+        </div>
+        <div class="app-stat-card">
+          <div class="app-stat-title">
+            <svg class="mv-icon" viewBox="0 0 24 24" stroke="#0f172a" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            Founder Command Center
+          </div>
+          <div class="app-stat-num" id="telemetryBreakdownAdmin">0</div>
+          <div class="app-stat-detail">Founder PIN unlock attempts, 1-click SMS approvals &amp; POS baseline updates in <code>admin.html</code>.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ERROR DIAGNOSTICS CONSOLE -->
+    <div class="panel-card">
+      <div class="panel-header">
+        <div>
+          <h2>Error Diagnostics &amp; Runtime Log Console</h2>
+          <div style="font-size:12.5px; color:var(--slate);">Client-side JavaScript exceptions, unhandled promise rejections &amp; API network failures.</div>
+        </div>
+      </div>
+      <div id="telemetryErrorCleanState" class="clean-health-banner">
+        <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span>Clean System Health: Zero Errors Recorded in Selected Time Range</span>
+      </div>
+      <div id="telemetryErrorTableWrapper" class="telemetry-table-wrapper" style="display:none; margin-top:12px;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:160px;">Timestamp</th>
+              <th style="width:140px;">Source App</th>
+              <th style="width:100px;">Severity</th>
+              <th>Error Message &amp; Diagnostic Details</th>
+            </tr>
+          </thead>
+          <tbody id="telemetryErrorTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- LIVE ACTIVITY EVENT STREAM -->
+    <div class="panel-card">
+      <div class="panel-header">
+        <div>
+          <h2>Live Activity Event Stream</h2>
+          <div style="font-size:12.5px; color:var(--slate);">Chronological timeline of telemetry events across all MarginVault client surfaces.</div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <input type="text" id="telemetryEventFilter" placeholder="Filter events, apps, stores..." oninput="renderTelemetryEventsTable()" style="margin-bottom:0; max-width:240px; padding:7px 10px; font-size:12.5px;">
+        </div>
+      </div>
+      <div class="telemetry-table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:160px;">Timestamp</th>
+              <th style="width:150px;">App Name</th>
+              <th style="width:190px;">Event Type</th>
+              <th style="width:150px;">Session ID</th>
+              <th>Event Metadata Summary</th>
+            </tr>
+          </thead>
+          <tbody id="telemetryEventsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ============================================================================
+  // FEATURE A: FOUNDER PASSCODE / SECURITY LOCK SCREEN LOGIC
+  // ============================================================================
+  const ALLOWED_FOUNDER_PASSCODES = new Set([
+    'vault2026',
+    'runnerman12@gmail.com',
+    'sf-vault-admin',
+    'alan2026'
+  ]);
+
+  function checkFounderLockState() {
+    const unlocked = sessionStorage.getItem('mv_founder_unlocked') === 'true';
+    const overlay = document.getElementById('founderLockOverlay');
+    if (unlocked) {
+      overlay.classList.add('hidden');
+    } else {
+      overlay.classList.remove('hidden');
+    }
+  }
+
+  function unlockFounderAdmin(e) {
+    if (e) e.preventDefault();
+    const inputEl = document.getElementById('founderPasscodeInput');
+    const errBox = document.getElementById('lockErrorBox');
+    const val = (inputEl.value || '').trim().toLowerCase();
+
+    if (ALLOWED_FOUNDER_PASSCODES.has(val)) {
+      sessionStorage.setItem('mv_founder_unlocked', 'true');
+      errBox.style.display = 'none';
+      inputEl.value = '';
+      checkFounderLockState();
+      if (window.mvTelemetry) {
+        window.mvTelemetry.track('admin_unlock_attempt', { success: true, method: 'pin_or_email' });
+      }
+      showToast('[Unlocked] Founder Admin Command Center unlocked for this browser session.');
+      if (typeof fetchAndRenderTelemetry === 'function') {
+        fetchAndRenderTelemetry(currentTelemetryRange);
+      }
+    } else {
+      errBox.style.display = 'block';
+      if (window.mvTelemetry) {
+        window.mvTelemetry.track('admin_unlock_attempt', { success: false, method: 'pin_or_email' });
+      }
+    }
+  }
+
+  function lockFounderAdmin() {
+    sessionStorage.removeItem('mv_founder_unlocked');
+    checkFounderLockState();
+    if (window.mvTelemetry) {
+      window.mvTelemetry.track('admin_lock_console', { action: 'lock' });
+    }
+  }
+
+  // ============================================================================
+  // INITIAL CLIENT REGISTRY, POS BASELINE CATALOGS & MMS QUEUE
+  // ============================================================================
+  let clients = [
+    {
+      phone: "+14155550101",
+      slug: "golden_gate_bakery_sample",
+      biz: "Golden Gate Bakery Group (Sample - 3 Stores)",
+      owner: "Carlos & Elena",
+      tier: "Tier 3 ($699/mo 3-Store Group Vault)",
+      fee: 699,
+      autoSend: false
+    },
+    {
+      phone: "+14155550199",
+      slug: "bayview_corner_spirits_sample",
+      biz: "Bayview Corner Spirits (Sample)",
+      owner: "Marco",
+      tier: "Tier 1 ($199/mo Starter Watchdog)",
+      fee: 199,
+      autoSend: false
+    },
+    {
+      phone: "+14155550177",
+      slug: "mission_taqueria_deli_sample",
+      biz: "Mission Panadería & Deli (Sample)",
+      owner: "Mateo",
+      tier: "Tier 2 ($399/mo Full Single-Store Vault)",
+      fee: 399,
+      autoSend: true
+    }
+  ];
+
+  // Store-specific POS Baseline CSV catalogs (Feature D)
+  let storePosBaselines = {
+    "golden_gate_bakery_sample": `SKU_ID,Item_Name,Units_Per_Case,Baseline_Case_Cost,Current_POS_Price,Target_Margin_Pct,Weekly_Cases
+SKU-101,Large AA Shell Eggs (15-Doz),180,54.00,14.50,0.72,35
+SKU-102,Unsalted Sweet Cream Butter (36-lb),36,68.00,4.25,0.70,18
+SKU-103,High-Gluten Artisan Bread Flour (50-lb),50,24.50,6.50,0.74,42`,
+    "bayview_corner_spirits_sample": `SKU_ID,Item_Name,Units_Per_Case,Baseline_Case_Cost,Current_POS_Price,Target_Margin_Pct,Weekly_Cases
+SKU-201,Reserve Reposado Tequila 750mL,12,482.40,54.99,0.34,8
+SKU-202,Imported Mexican Lager 12-Pack,2,28.20,18.99,0.30,45
+SKU-203,Artisan Vodka 750mL (12-Btl Case),12,264.00,31.99,0.35,5`,
+    "mission_taqueria_deli_sample": `SKU_ID,Item_Name,Units_Per_Case,Baseline_Case_Cost,Current_POS_Price,Target_Margin_Pct,Weekly_Cases
+SKU-101,Large AA Shell Eggs (15-Doz),180,54.00,14.50,0.72,28
+SKU-102,Unsalted Sweet Cream Butter (36-lb),36,68.00,4.25,0.70,14
+SKU-301,Hass Avocados #48 Count Case,48,62.00,3.50,0.68,22`
+  };
+
+  let mmsQueue = [
+    {
+      id: "MMS-99201",
+      time: "Today, 9:14 AM",
+      phone: "+14155550101",
+      biz: "Golden Gate Bakery Group (Sample - 3 Stores)",
+      owner: "Carlos & Elena",
+      vendor: "Sysco SF Delivery Invoice #4410",
+      folderPath: "clients/golden_gate_bakery_sample/incoming_invoices/inv_MMS-99201.jpg",
+      piiRedacted: 2,
+      foundAmount: 827.00,
+      status: "PENDING_APPROVAL",
+      smsText: `[MarginVault AI -- Golden Gate Bakery Group (Sample)]
+Hey Carlos & Elena -- we automatically received & audited your invoice photo (MMS-99201):
+* Profit Protected on This Delivery: +$827/mo
+* Cross-Store Credit ($63.00): Large AA Shell Eggs (15-Doz) billed $59.25/cs vs $54.00/cs at Store #1. Reply 'SEND' to claim credit.
+* Barcode Update (Large AA Shell Eggs): Wholesale up +9.7% ($54.00 -> $59.25/cs). Update register from $14.50 to $15.00 today (+$693/mo protected).
+* Barcode Update (Sweet Cream Butter): Wholesale up +8.1% ($68.00 -> $73.50/cs). Update register from $4.25 to $4.75 today (+$71/mo protected).`
+    },
+    {
+      id: "MMS-99202",
+      time: "Today, 10:02 AM",
+      phone: "+14155550199",
+      biz: "Bayview Corner Spirits (Sample)",
+      owner: "Marco",
+      vendor: "Southern Glazer's Spirits Invoice #7712",
+      folderPath: "clients/bayview_corner_spirits_sample/incoming_invoices/inv_MMS-99202.jpg",
+      piiRedacted: 1,
+      foundAmount: 269.00,
+      status: "PENDING_APPROVAL",
+      smsText: `[MarginVault AI -- Bayview Corner Spirits (Sample)]
+Hey Marco -- we automatically received & audited your invoice photo (MMS-99202):
+* Profit Protected on This Delivery: +$269/mo
+* Barcode Update (Reserve Reposado Tequila 750mL): Wholesale up +5.0% ($482.40 -> $506.40/cs). Update barcode from $54.99 to $63.99 today (+$190/mo protected).
+* Barcode Update (Imported Mexican Lager 12-Pack): Wholesale up +9.9% ($28.20 -> $31.00/cs). Update barcode from $18.99 to $22.99 today (+$79/mo protected).`
+    },
+    {
+      id: "MMS-99188",
+      time: "Yesterday, 3:45 PM",
+      phone: "+14155550177",
+      biz: "Mission Panadería & Deli (Sample)",
+      owner: "Mateo",
+      vendor: "BakeMark & DoorDash Weekly Dispute Sync",
+      folderPath: "clients/mission_taqueria_deli_sample/incoming_invoices/inv_MMS-99188.jpg",
+      piiRedacted: 3,
+      foundAmount: 512.10,
+      status: "SENT",
+      smsText: `[MarginVault AI -- Mission Panadería & Deli (Sample)]
+Hey Mateo -- your invoice & DoorDash audit is complete:
+* Total Protected & Found: +$512.10
+* DoorDash Chargebacks Won: 4 unfair 'missing item' deductions verified against POS kitchen timestamps (+$105.40 credited Friday).
+* 4 AM Weather Bake-Sheet: Rain forecast tomorrow -- bake +4 trays Sweet Pastries, -2 trays bolillo rolls.`
+    }
+  ];
+
+  let uploadedImageBase64 = null;
+
+  function showToast(msg) {
+    const t = document.getElementById('toastBanner');
+    t.innerHTML = msg;
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 4800);
+  }
+
+  function switchTab(tabId, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    btn.classList.add('active');
+    if (tabId === 'tab-monitoring' && typeof fetchAndRenderTelemetry === 'function') {
+      fetchAndRenderTelemetry(currentTelemetryRange);
+    }
+  }
+
+  // ============================================================================
+  // FEATURE B: "ZERO-TWILIO-WAIT" DIRECT SMS (`sms:`), EMAIL (`mailto:`), & COPY
+  // ============================================================================
+  function buildSmsHref(phone, text) {
+    const cleanPhone = (phone || '').replace(/[^+\d]/g, '');
+    return `sms:${cleanPhone}?body=${encodeURIComponent(text || '')}`;
+  }
+
+  function buildVendorCreditMailtoHref(item, currentSmsText) {
+    const subject = `CREDIT MEMO REQUEST: ${item.biz} — ${item.vendor} (${item.id})`;
+    const body =
+`Hello ${item.vendor} Accounts Receivable & Sales Team,
+
+Please review and issue a distributor credit / price-match adjustment for ${item.biz} (Attn: ${item.owner}) regarding delivery reference ${item.id} (${item.vendor}):
+
+------------------------------------------------------------------
+${currentSmsText}
+------------------------------------------------------------------
+
+Please confirm the credit memo number applied to our next statement.
+
+Thank you,
+${item.owner}
+${item.biz}
+(Audited & Verified via MarginVault AI San Francisco)`;
+    return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+
+  function openInPhoneSmsApp(idx) {
+    const item = mmsQueue[idx];
+    const currentText = document.getElementById(`smsEdit_${idx}`).value;
+    item.smsText = currentText;
+    window.location.href = buildSmsHref(item.phone, currentText);
+    showToast(`[SMS] Opening default Phone / Messages app for ${item.owner} (${item.phone})...`);
+  }
+
+  function copySmsTextToClipboard(idx) {
+    const item = mmsQueue[idx];
+    const textarea = document.getElementById(`smsEdit_${idx}`);
+    const currentText = textarea.value;
+    item.smsText = currentText;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(currentText).then(() => {
+        showToast(`[Copied] Copied formatted SMS for <strong>${item.owner} (${item.phone})</strong> to clipboard!`);
+      }).catch(() => {
+        textarea.select();
+        document.execCommand('copy');
+        showToast(`[Copied] Copied formatted SMS for <strong>${item.owner}</strong> to clipboard!`);
+      });
+    } else {
+      textarea.select();
+      document.execCommand('copy');
+      showToast(`[Copied] Copied formatted SMS for <strong>${item.owner}</strong> to clipboard!`);
+    }
+  }
+
+  function openVendorCreditEmail(idx) {
+    const item = mmsQueue[idx];
+    const currentText = document.getElementById(`smsEdit_${idx}`).value;
+    item.smsText = currentText;
+    window.location.href = buildVendorCreditMailtoHref(item, currentText);
+    showToast(`[Email] Launched pre-populated Vendor Credit Claim email for <strong>${item.vendor}</strong>!`);
+  }
+
+  function saveSharedStateToLocalStorage() {
+    try {
+      localStorage.setItem('mv_shared_clients', JSON.stringify(clients));
+      localStorage.setItem('mv_shared_mms_queue', JSON.stringify(mmsQueue));
+    } catch (e) {}
+  }
+
+  function loadSharedStateFromLocalStorage() {
+    try {
+      const rawClients = localStorage.getItem('mv_shared_clients');
+      if (rawClients) {
+        const parsedClients = JSON.parse(rawClients);
+        if (Array.isArray(parsedClients) && parsedClients.length > 0) {
+          const merged = [...parsedClients];
+          clients.forEach(defClient => {
+            if (!merged.some(c => c.slug === defClient.slug || c.phone === defClient.phone)) {
+              merged.push(defClient);
+            }
+          });
+          clients = merged;
+        }
+      }
+      const rawQueue = localStorage.getItem('mv_shared_mms_queue');
+      if (rawQueue) {
+        const parsedQueue = JSON.parse(rawQueue);
+        if (Array.isArray(parsedQueue) && parsedQueue.length > 0) {
+          parsedQueue.forEach(item => {
+            const existing = mmsQueue.find(m => m.id === item.id);
+            if (!existing) {
+              mmsQueue.unshift(item);
+            } else {
+              // Propagate status updates (e.g. PENDING_APPROVAL -> SENT)
+              if (item.status === 'SENT' || (existing.status !== 'SENT' && item.status)) {
+                existing.status = item.status;
+              }
+              if (item.smsText) existing.smsText = item.smsText;
+              if (item.foundAmount != null && item.foundAmount > 0) existing.foundAmount = item.foundAmount;
+              if (item.vendor) existing.vendor = item.vendor;
+            }
+          });
+          mmsQueue.forEach(existing => {
+            const inParsed = parsedQueue.find(p => p.id === existing.id);
+            if (inParsed && existing.status === 'SENT') {
+              inParsed.status = 'SENT';
+            }
+          });
+        }
+      }
+      saveSharedStateToLocalStorage();
+    } catch (e) {}
+  }
+
+  function syncDirectActionLinks(idx) {
+    const item = mmsQueue[idx];
+    const currentText = document.getElementById(`smsEdit_${idx}`).value;
+    item.smsText = currentText;
+    const smsLink = document.getElementById(`smsLink_${idx}`);
+    const mailLink = document.getElementById(`mailLink_${idx}`);
+    if (smsLink) smsLink.setAttribute('href', buildSmsHref(item.phone, currentText));
+    if (mailLink) mailLink.setAttribute('href', buildVendorCreditMailtoHref(item, currentText));
+    saveSharedStateToLocalStorage();
+  }
+
+  function renderMmsQueue() {
+    const container = document.getElementById('mmsQueueContainer');
+    container.innerHTML = mmsQueue.map((item, idx) => {
+      const smsHref = buildSmsHref(item.phone, item.smsText);
+      const mailHref = buildVendorCreditMailtoHref(item, item.smsText);
+      return `
+      <div class="mms-item ${item.status === 'SENT' ? 'sent' : ''}">
+        <div class="mms-meta">
+          <div>
+            <span class="phone-pill">${item.phone}</span>
+            <strong style="margin-left:8px; font-size:15px;">${item.biz}</strong>
+            <span style="color:#64748b; margin-left:6px;">(${item.owner} &bull; ${item.time})</span>
+          </div>
+          <span class="pii-badge"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>PII Firewall: ${item.piiRedacted} Banking/Tax Fields Masked</span>
+        </div>
+        <div style="font-size:13px; color:#334155; margin-bottom:6px;">
+          <strong>Auto-Saved To:</strong> <code>${item.folderPath}</code> &bull; <strong>Source:</strong> ${item.vendor}
+        </div>
+        <textarea rows="5" id="smsEdit_${idx}" oninput="syncDirectActionLinks(${idx})" style="font-family:Consolas,monospace; font-size:12.5px; background:#0f172a; color:#f8fafc; border-left:4px solid #10b981;">${item.smsText}</textarea>
+        <div class="mms-action-bar">
+          <span style="font-size:13.5px; font-weight:800; color:#059669;">Protected &amp; Found: +$${Number(item.foundAmount).toFixed(2)}</span>
+          <div class="direct-action-group">
+            <a id="smsLink_${idx}" href="${smsHref}" class="btn btn-blue" title="Send immediately from your iPhone/Mac/PC Messages app without waiting for Twilio 10DLC">
+              <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>Open Phone SMS
+            </a>
+            <button type="button" class="btn btn-outline" onclick="copySmsTextToClipboard(${idx})" title="Copy formatted SMS to clipboard in 1 click">
+              <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>Copy SMS Text
+            </button>
+            <a id="mailLink_${idx}" href="${mailHref}" class="btn btn-amber" title="Open pre-populated distributor credit request in Outlook / Mail">
+              <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Send Vendor Claim
+            </a>
+            ${item.status === 'SENT'
+              ? `<span style="color:#059669; font-weight:800; font-size:13px; padding:4px 8px;"><svg class="mv-icon" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Dispatched to ${item.phone}</span>`
+              : `<button type="button" class="btn btn-emerald" onclick="sendSingleSms(${idx})"><svg class="mv-icon" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Approve Send SMS</button>`
+            }
+          </div>
+        </div>
+      </div>
+    `}).join('');
+
+    // Update KPIs
+    const totalMrr = clients.reduce((s, c) => s + Number(c.fee || 0), 0);
+    const totalFound = mmsQueue.reduce((s, m) => s + Number(m.foundAmount || 0), 0);
+    const totalPii = mmsQueue.reduce((s, m) => s + Number(m.piiRedacted || 0), 0);
+    document.getElementById('kpiClients').textContent = `${clients.length} Clients`;
+    document.getElementById('kpiMrr').textContent = `$${totalMrr.toLocaleString()} / mo`;
+    document.getElementById('kpiFound').textContent = `+$${totalFound.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    document.getElementById('kpiPii').textContent = `${totalPii} Redacted`;
+  }
+
+  async function sendSingleSms(idx) {
+    const editedText = document.getElementById(`smsEdit_${idx}`).value;
+    mmsQueue[idx].smsText = editedText;
+    mmsQueue[idx].status = 'SENT';
+    saveSharedStateToLocalStorage();
+    renderMmsQueue();
+    try {
+      await fetch('/api/approve-sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: mmsQueue[idx].id, smsText: editedText })
+      });
+    } catch (e) {}
+    showToast(`[Sent] SMS Action Card sent to ${mmsQueue[idx].owner} (${mmsQueue[idx].phone}) and logged in client vault!`);
+  }
+
+  async function approveAllSms() {
+    let count = 0;
+    mmsQueue.forEach(m => {
+      if (m.status !== 'SENT') {
+        m.status = 'SENT';
+        count++;
+      }
+    });
+    saveSharedStateToLocalStorage();
+    renderMmsQueue();
+    try {
+      await fetch('/api/approve-sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 'ALL' })
+      });
+    } catch (e) {}
+    showToast(`[Approved] Approved &amp; dispatched ${count} pending SMS Action Cards!`);
+  }
+
+  // ============================================================================
+  // FEATURE D: STORE POS BASELINE CSV VIEWER, PARSER & IMPORTER (TAB 2)
+  // ============================================================================
+  function parsePosBaselineCsvString(csvText) {
+    const defaultCsv = storePosBaselines["golden_gate_bakery_sample"];
+    const raw = (csvText && csvText.trim()) ? csvText.trim() : defaultCsv;
+    const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length < 2) return [];
+
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(',').map(c => c.trim());
+      if (cols.length < 5) continue;
+      const sku = cols[0];
+      const name = cols[1];
+      const units = parseFloat(cols[2]) || 12;
+      const oldCost = parseFloat(cols[3]) || 50.0;
+      const posPrice = parseFloat(cols[4]) || 10.0;
+      const margin = parseFloat(cols[5]) || 0.65;
+      const wkCases = parseFloat(cols[6]) || 15.0;
+      const keywords = name.toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').split(/\s+/).filter(w => w.length >= 3 && !['case','doz','btl','pack','the','and'].includes(w));
+      rows.push({ sku, name, units, oldCost, posPrice, margin, wkCases, keywords });
+    }
+    return rows;
+  }
+
+  function renderPosBaselineViewer() {
+    const selectEl = document.getElementById('posStoreSelect');
+    const slug = selectEl.value || (clients[0] && clients[0].slug) || "golden_gate_bakery_sample";
+    if (!storePosBaselines[slug]) {
+      storePosBaselines[slug] = storePosBaselines["golden_gate_bakery_sample"];
+    }
+    const csvText = storePosBaselines[slug];
+    document.getElementById('posBaselineCsvEditor').value = csvText;
+
+    const parsedRows = parsePosBaselineCsvString(csvText);
+    const tbody = document.getElementById('posBaselineTableBody');
+    tbody.innerHTML = parsedRows.map(r => `
+      <tr>
+        <td><code>${r.sku}</code></td>
+        <td><strong>${r.name}</strong></td>
+        <td>${r.units}</td>
+        <td><strong>$${r.oldCost.toFixed(2)}/cs</strong></td>
+        <td style="color:#059669; font-weight:700;">$${r.posPrice.toFixed(2)}</td>
+        <td>${(r.margin * 100).toFixed(0)}%</td>
+        <td>${r.wkCases} cs/wk</td>
+      </tr>
+    `).join('');
+  }
+
+  function handlePosCsvFileUpload(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      const content = (evt.target.result || '').trim();
+      if (content) {
+        document.getElementById('posBaselineCsvEditor').value = content;
+        savePosBaselineFromEditor();
+        showToast(`[Loaded] Loaded <code>${file.name}</code> into Store POS Baseline catalog!`);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  async function savePosBaselineFromEditor() {
+    const slug = document.getElementById('posStoreSelect').value;
+    const csvText = document.getElementById('posBaselineCsvEditor').value.trim();
+    if (!slug || !csvText) return;
+    storePosBaselines[slug] = csvText;
+    try {
+      localStorage.setItem('mv_pos_baselines', JSON.stringify(storePosBaselines));
+    } catch (e) {}
+    renderPosBaselineViewer();
+
+    try {
+      await fetch('/api/save-pos-baseline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, csvText })
+      });
+    } catch (e) {}
+    showToast(`[Saved] Saved &amp; activated <code>clients/${slug}/pos_baseline.csv</code> (${parsePosBaselineCsvString(csvText).length} SKUs)!`);
+  }
+
+  function exportSelectedPosBaselineCsv() {
+    const slug = document.getElementById('posStoreSelect').value || 'store';
+    const csvText = document.getElementById('posBaselineCsvEditor').value.trim();
+    const blob = new Blob([csvText + '\n'], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${slug}_pos_baseline.csv`;
+    a.click();
+    showToast(`[Downloaded] Downloaded <code>${slug}_pos_baseline.csv</code>!`);
+  }
+
+  function copyStoreSnapLink(slug, bizName) {
+    const relativeLink = `snap.html?store=${encodeURIComponent(slug)}`;
+    let fullUrl = relativeLink;
+    try {
+      fullUrl = new URL(relativeLink, window.location.href).href;
+    } catch (e) {}
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(fullUrl).then(() => {
+        showToast(`[Link] Copied 1-Tap Store Snap Link for <strong>${bizName}</strong>: <code>${relativeLink}</code>`);
+      }).catch(() => {
+        showToast(`[Link] Store Snap Link for <strong>${bizName}</strong>: <code>${relativeLink}</code>`);
+      });
+    } else {
+      const temp = document.createElement('input');
+      temp.value = fullUrl;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      document.body.removeChild(temp);
+      showToast(`[Link] Copied 1-Tap Store Snap Link for <strong>${bizName}</strong>: <code>${relativeLink}</code>`);
+    }
+  }
+
+  function renderClients() {
+    const tbody = document.getElementById('clientTableBody');
+    tbody.innerHTML = clients.map((c, i) => `
+      <tr>
+        <td><span class="phone-pill">${c.phone}</span></td>
+        <td><strong>${c.biz}</strong><br><code style="font-size:11.5px; color:#64748b;">clients/${c.slug}/</code></td>
+        <td>${c.owner}</td>
+        <td><strong>${c.tier}</strong></td>
+        <td>
+          <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-start;">
+            <span style="font-size:11.5px; font-weight:800; color:#059669;">In-House Snap Link + Native SMS</span>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+              <button type="button" class="btn btn-emerald" style="padding:5px 10px; font-size:11.5px;" onclick="copyStoreSnapLink('${c.slug}', '${(c.biz || '').replace(/'/g, "\\'")}')">
+                <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Copy Snap Link
+              </button>
+              <a href="snap.html?store=${encodeURIComponent(c.slug)}" target="_blank" class="btn btn-outline" style="padding:4px 9px; font-size:11.5px;" title="Open ${c.biz} 1-Tap Camera App">
+                <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>Open Snap App &nearr;
+              </a>
+              <button type="button" class="toggle-pill ${c.autoSend ? 'on' : 'off'}" onclick="toggleAutoSend(${i})">
+                ${c.autoSend ? 'Auto-Pilot: ON' : '1-Click Approve'}
+              </button>
+            </div>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+
+    const simPhone = document.getElementById('simPhone');
+    simPhone.innerHTML = clients.map(c => `<option value="${c.phone}">${c.phone} — ${c.biz} (${c.owner})</option>`).join('');
+
+    const posSelect = document.getElementById('posStoreSelect');
+    const prevSlug = posSelect.value;
+    posSelect.innerHTML = clients.map(c => `<option value="${c.slug}">${c.biz} (clients/${c.slug}/pos_baseline.csv)</option>`).join('');
+    if (prevSlug && clients.some(c => c.slug === prevSlug)) {
+      posSelect.value = prevSlug;
+    }
+    renderPosBaselineViewer();
+  }
+
+  function toggleAutoSend(i) {
+    clients[i].autoSend = !clients[i].autoSend;
+    saveSharedStateToLocalStorage();
+    renderClients();
+    showToast(`Updated In-House Snap + Native SMS mode for ${clients[i].biz} to ${clients[i].autoSend ? '100% Auto-Pilot' : '1-Click Founder Approval'}.`);
+  }
+
+  async function addNewClient(e) {
+    e.preventDefault();
+    const phone = document.getElementById('ncPhone').value.trim();
+    const biz = document.getElementById('ncBiz').value.trim();
+    const owner = document.getElementById('ncOwner').value.trim();
+    const tierSelect = document.getElementById('ncTier');
+    const tier = tierSelect.value;
+    const fee = tier.includes('199') ? 199 : (tier.includes('399') ? 399 : 699);
+    const autoSend = document.getElementById('ncAuto').value === 'true';
+    const slug = biz.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
+    if (!storePosBaselines[slug]) {
+      storePosBaselines[slug] = storePosBaselines["golden_gate_bakery_sample"];
+    }
+    clients.unshift({ phone, slug, biz, owner, tier, fee, autoSend });
+    saveSharedStateToLocalStorage();
+    renderClients();
+    renderMmsQueue();
+    e.target.reset();
+    try {
+      await fetch('/api/add-client', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, biz, owner, tier, autoSend })
+      });
+    } catch (err) {}
+    showToast(`[Created] Created isolated vault <code>clients/${slug}/</code> &amp; In-House Snap Link (<code>snap.html?store=${slug}</code>)!`);
+  }
+
+  // ============================================================================
+  // FEATURE C: REAL FILE UPLOAD READER (`#simFile`) & DYNAMIC INVOICE PARSER
+  // ============================================================================
+  function handleSimFileUpload(e) {
+    const file = e.target.files && e.target.files[0];
+    const statusBox = document.getElementById('simFileStatusBox');
+    if (!file) {
+      statusBox.style.display = 'none';
+      uploadedImageBase64 = null;
+      return;
+    }
+
+    const nameLower = file.name.toLowerCase();
+    const reader = new FileReader();
+
+    if (nameLower.endsWith('.txt') || nameLower.endsWith('.csv')) {
+      reader.onload = function(evt) {
+        const textContent = (evt.target.result || '').trim();
+        if (textContent) {
+          document.getElementById('simText').value = textContent;
+          uploadedImageBase64 = null;
+          statusBox.style.display = 'block';
+          statusBox.innerHTML = `<svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><strong>File Loaded via FileReader:</strong> <code>${file.name}</code> (${file.size.toLocaleString()} bytes) loaded directly into <code>#simText</code> for live dynamic parsing!`;
+          showToast(`[Loaded] Loaded invoice file <code>${file.name}</code> into simulator!`);
+        }
+      };
+      reader.readAsText(file);
+    } else {
+      // Image (.jpg, .png) or .pdf
+      reader.onload = function(evt) {
+        uploadedImageBase64 = evt.target.result;
+        const curText = document.getElementById('simText').value;
+        const headerTag = `[UPLOADED IMAGE/PDF FILE: ${file.name} (${Math.round(file.size / 1024)} KB)]`;
+        if (!curText.includes(file.name)) {
+          document.getElementById('simText').value = headerTag + "\n" + curText.replace(/^\[UPLOADED IMAGE\/PDF FILE:[^\]]+\]\n?/, '');
+        }
+        statusBox.style.display = 'block';
+        statusBox.innerHTML = `<svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg><strong>Image/PDF Ready for Vision OCR:</strong> <code>${file.name}</code> (${Math.round(file.size / 1024)} KB) attached. Edit line items below or click Run to audit!`;
+        showToast(`[Attached] Attached invoice photo <code>${file.name}</code> for Vision OCR &amp; Dynamic Audit!`);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function dynamicAuditInvoiceText(rawText, storeSlug, clientBiz, clientOwner, msgId) {
+    // 1. Deterministic PII & Banking Redaction (Matches pii_banking_scrubber.py)
+    let redactions = 0;
+    const scrubbedText = rawText
+      .replace(/(routing|aba|acct|account|wire|ach)(\s*(?:no\.?|num|number|#|:)?\s*[:#-]?\s*)(\d{7,17})/gi, (_, p1, p2) => {
+        redactions++;
+        return `${p1}${p2}[REDACTED_ACH_ROUTING]`;
+      })
+      .replace(/\b\d{9}\b/g, () => {
+        redactions++;
+        return '[REDACTED_ACH_ROUTING]';
+      })
+      .replace(/\b\d{2}-\d{7}\b/g, () => {
+        redactions++;
+        return '[REDACTED_FEIN_TAX_ID]';
+      })
+      .replace(/\b(?!42-\d{3}-)\d{3}-\d{2}-\d{4}\b/g, () => {
+        redactions++;
+        return '[REDACTED_SSN_TAX_ID]';
+      });
+
+    // 2. Load store's active POS baseline SKUs (+ fallback catalog across all stores)
+    const activeStoreSkus = parsePosBaselineCsvString(storePosBaselines[storeSlug]);
+    const fallbackSkus = [
+      ...parsePosBaselineCsvString(storePosBaselines["golden_gate_bakery_sample"]),
+      ...parsePosBaselineCsvString(storePosBaselines["bayview_corner_spirits_sample"])
+    ];
+    const catalog = [...activeStoreSkus];
+    fallbackSkus.forEach(fs => {
+      if (!catalog.some(c => c.sku.toUpperCase() === fs.sku.toUpperCase())) {
+        catalog.push(fs);
+      }
+    });
+
+    // 3. Detect Distributor / Vendor Header
+    let vendorName = "Wholesale Delivery Invoice";
+    if (/sysco/i.test(scrubbedText)) vendorName = "Sysco SF Delivery";
+    else if (/us\s*foods/i.test(scrubbedText)) vendorName = "US Foods Bay Area";
+    else if (/bakemark/i.test(scrubbedText)) vendorName = "BakeMark USA";
+    else if (/southern\s+glazer/i.test(scrubbedText)) vendorName = "Southern Glazer's Spirits";
+    else if (/rndc|republic\s+national/i.test(scrubbedText)) vendorName = "RNDC Wine & Spirits";
+    else if (/reyes|golden\s+brands/i.test(scrubbedText)) vendorName = "Reyes Beer Division";
+    else if (/core[\s-]*mark/i.test(scrubbedText)) vendorName = "Core-Mark International";
+
+    const invMatch = scrubbedText.match(/(?:invoice|inv|ticket)\s*(?:no\.?|num|#|:)?\s*([A-Z0-9-]{3,14})/i);
+    const invNum = invMatch ? `#${invMatch[1].replace(/^#/, '')}` : "";
+
+    // 4. Parse each invoice line dynamically using the actual numbers in `#simText`
+    const lines = scrubbedText.split(/\r?\n/);
+    const auditedItems = [];
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith('=') || line.startsWith('-') || line.startsWith('[UPLOADED')) continue;
+      if (/^(sku_id|item_name|client:|store location:|federal tax)/i.test(line)) continue;
+      if (/invoice\s*#/i.test(line) && !/sku-|cases|cs\b|@/i.test(line)) continue;
+
+      // Match SKU by ID or fuzzy keywords
+      let matched = null;
+      for (const item of catalog) {
+        if (line.toUpperCase().includes(item.sku.toUpperCase())) {
+          matched = item;
+          break;
+        }
+      }
+      if (!matched) {
+        const lower = line.toLowerCase();
+        let bestHits = 0;
+        for (const item of catalog) {
+          const hits = item.keywords.filter(kw => lower.includes(kw)).length;
+          if (hits > bestHits) {
+            bestHits = hits;
+            matched = item;
+          }
+        }
+      }
+
+      // Extract parenthetical notes (e.g., `(Store #1 price: $54.00/cs)` or `(Previous baseline: $68.00/cs)`)
+      const parenMatches = [...line.matchAll(/\(([^)]+)\)/g)].map(m => m[1]);
+      const mainSegment = line.replace(/\([^)]*\)/g, ' ');
+
+      let crossStorePrice = null;
+      let explicitBaseline = null;
+      for (const seg of parenMatches) {
+        const pm = seg.match(/\$?\s*(\d{1,4}\.\d{2})/);
+        if (pm) {
+          const val = parseFloat(pm[1]);
+          if (/store\s*#?\s*1|contract|vs/i.test(seg)) crossStorePrice = val;
+          else if (/baseline|prev|old|prior/i.test(seg)) explicitBaseline = val;
+          else crossStorePrice = val;
+        }
+      }
+      const inlineStore1 = line.match(/(?:store\s*#?\s*1(?:\s+price|\s+billed)?|vs\.?)\s*[:@]?\s*\$\s*(\d{1,4}\.\d{2})/i);
+      if (inlineStore1) crossStorePrice = parseFloat(inlineStore1[1]);
+
+      // Extract billed case price from mainSegment
+      let billedPrice = null;
+      const atPriceMatch = mainSegment.match(/@\s*\$?\s*(\d{1,4}\.\d{2})|\$\s*(\d{1,4}\.\d{2})\s*(?:\/\s*cs|\/\s*case)?/i);
+      if (atPriceMatch) {
+        billedPrice = parseFloat(atPriceMatch[1] || atPriceMatch[2]);
+      } else {
+        const allDecimals = [...mainSegment.matchAll(/\b(\d{1,4}\.\d{2})\b/g)].map(m => parseFloat(m[1]));
+        if (allDecimals.length > 0) billedPrice = allDecimals[0];
+      }
+      if (billedPrice === null || isNaN(billedPrice)) continue;
+
+      // Extract case quantity (`14 cases`, `14cs`, or standalone integer column)
+      let qtyCases = 10;
+      const qtyMatch = mainSegment.match(/\b(\d{1,3})\s*(?:cases|case|cs|ct|bx)\b/i);
+      if (qtyMatch) {
+        qtyCases = parseFloat(qtyMatch[1]);
+      } else {
+        const cleanedForQty = mainSegment.replace(/SKU-\d+/gi, '').replace(/#\d+/g, '');
+        const intMatch = cleanedForQty.match(/\b(\d{1,3})\b(?![.\d])/);
+        if (intMatch) qtyCases = parseFloat(intMatch[1]);
+      }
+
+      const skuCode = matched ? matched.sku : `SKU-DYN${auditedItems.length + 1}`;
+      const itemName = matched
+        ? matched.name
+        : (mainSegment.replace(/SKU-\d+|\$\d+\.\d+|@|\d+\s*(?:cases|case|cs)/gi, '').replace(/[\s—\-:|]+/g, ' ').trim().slice(0, 38) || 'Wholesale Item');
+      const units = matched ? matched.units : 12;
+      const baseCost = explicitBaseline !== null
+        ? explicitBaseline
+        : (crossStorePrice !== null ? crossStorePrice : (matched ? matched.oldCost : +(billedPrice * 0.90).toFixed(2)));
+      const oldPos = matched ? matched.posPrice : +((baseCost / units) / 0.32).toFixed(2);
+      const margin = matched ? matched.margin : 0.68;
+      const wkCases = Math.max(qtyCases, matched ? matched.wkCases : 12);
+
+      const hikePct = baseCost > 0 ? ((billedPrice - baseCost) / baseCost) * 100.0 : 0.0;
+      const creditUsd = (crossStorePrice !== null && billedPrice > crossStorePrice)
+        ? +((billedPrice - crossStorePrice) * qtyCases).toFixed(2)
+        : 0.0;
+
+      let recPos = oldPos;
+      let monthlyProtected = 0.0;
+      if (hikePct >= 3.0) {
+        const newUnit = billedPrice / Math.max(1, units);
+        const rawNewPos = (newUnit / Math.max(0.15, 1.0 - margin)) - 0.01;
+        if (margin <= 0.45) {
+          recPos = Math.floor(Math.max(rawNewPos, oldPos + 1.0)) + 0.99;
+        } else {
+          const step = hikePct <= 20.0 ? 0.50 : Math.round((oldPos * (hikePct / 100.0)) * 2.0) / 2.0;
+          recPos = +(oldPos + Math.max(0.50, step)).toFixed(2);
+        }
+        monthlyProtected = +Math.max(65.0, (recPos - oldPos) * units * wkCases * 0.22).toFixed(2);
+      }
+
+      auditedItems.push({
+        sku: skuCode,
+        name: itemName,
+        qtyCases,
+        baseCost,
+        billedPrice,
+        crossStorePrice,
+        hikePct,
+        creditUsd,
+        oldPos,
+        recPos,
+        monthlyProtected
+      });
+    }
+
+    const totalCredit = auditedItems.reduce((s, i) => s + i.creditUsd, 0);
+    const totalMonthlyPos = auditedItems.reduce((s, i) => s + i.monthlyProtected, 0);
+    const totalProtected = +(totalCredit + totalMonthlyPos).toFixed(2);
+
+    const smsBullets = [];
+    for (const item of auditedItems) {
+      if (item.creditUsd > 0 && item.crossStorePrice !== null) {
+        smsBullets.push(
+          `* Cross-Store Credit ($${item.creditUsd.toFixed(2)}): ${item.name} billed $${item.billedPrice.toFixed(2)}/cs vs $${item.crossStorePrice.toFixed(2)}/cs at Store #1 (${item.qtyCases} cases). Reply 'SEND' to claim credit.`
+        );
+      }
+      if (item.hikePct >= 3.0 && item.monthlyProtected > 0) {
+        smsBullets.push(
+          `* Barcode/POS Update (${item.name}): Wholesale up +${item.hikePct.toFixed(1)}% ($${item.baseCost.toFixed(2)} -> $${item.billedPrice.toFixed(2)}/cs). Update POS price from $${item.oldPos.toFixed(2)} to $${item.recPos.toFixed(2)} today (+$${item.monthlyProtected.toFixed(0)}/mo protected).`
+        );
+      }
+    }
+    if (smsBullets.length === 0) {
+      smsBullets.push(`* Audited line items within contracted POS baseline tolerances.`);
+    }
+
+    const generatedSms =
+`[MarginVault AI -- ${clientBiz}]
+Hey ${clientOwner} -- we automatically received & audited your ${vendorName} ${invNum} (${msgId}):
+* Profit Protected on This Delivery: +$${totalProtected.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+${smsBullets.join('\n')}`;
+
+    return {
+      redactions,
+      scrubbedText,
+      vendorLabel: `${vendorName} ${invNum}`.trim(),
+      auditedItems,
+      totalCredit,
+      totalMonthlyPos,
+      totalProtected,
+      generatedSms
+    };
+  }
+
+  async function simulateIncomingInvoice(e) {
+    e.preventDefault();
+    const phone = document.getElementById('simPhone').value;
+    const rawText = document.getElementById('simText').value;
+    const client = clients.find(c => c.phone === phone) || clients[0];
+    const newMsgId = 'MMS-' + Math.floor(10000 + Math.random() * 89999);
+
+    const audit = dynamicAuditInvoiceText(rawText, client.slug, client.biz, client.owner, newMsgId);
+
+    const newItem = {
+      id: newMsgId,
+      time: "Just Now",
+      phone: client.phone,
+      biz: client.biz,
+      owner: client.owner,
+      vendor: audit.vendorLabel || "Live Simulated Invoice Upload",
+      folderPath: `clients/${client.slug}/incoming_invoices/inv_${newMsgId}.jpg`,
+      piiRedacted: audit.redactions,
+      foundAmount: audit.totalProtected,
+      status: client.autoSend ? "SENT" : "PENDING_APPROVAL",
+      smsText: audit.generatedSms
+    };
+
+    mmsQueue.unshift(newItem);
+    saveSharedStateToLocalStorage();
+    renderMmsQueue();
+
+    // Render dynamic line-by-line math breakdown
+    const lineBreakdownHtml = audit.auditedItems.length
+      ? `<table style="margin:8px 0 12px 0; font-size:12px;">
+          <thead>
+            <tr>
+              <th>SKU / Item</th>
+              <th>Qty &amp; Billed</th>
+              <th>Baseline</th>
+              <th>Credit Due</th>
+              <th>New POS / Protected</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${audit.auditedItems.map(it => `
+              <tr>
+                <td><strong>${it.sku}</strong><br>${it.name}</td>
+                <td>${it.qtyCases} cs @ <strong>$${it.billedPrice.toFixed(2)}</strong></td>
+                <td>$${it.baseCost.toFixed(2)} (${it.hikePct >= 0 ? '+' : ''}${it.hikePct.toFixed(1)}%)</td>
+                <td style="color:#d97706; font-weight:700;">$${it.creditUsd.toFixed(2)}</td>
+                <td style="color:#059669; font-weight:700;">$${it.oldPos.toFixed(2)} &rarr; $${it.recPos.toFixed(2)} (+$${it.monthlyProtected.toFixed(0)}/mo)</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>`
+      : '';
+
+    document.getElementById('simResultBox').innerHTML = `
+      <div style="background:#ecfdf5; border:1px solid #10b981; padding:12px; border-radius:8px; color:#065f46; margin-bottom:12px;">
+        <strong><svg class="mv-icon" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Auto-Routed to <code>clients/${client.slug}/</code>!</strong><br>
+        Masked <strong>${audit.redactions} sensitive ACH/FEIN fields</strong> &bull; Dynamically Audited <strong>${audit.auditedItems.length} Line Items (+$${audit.totalProtected.toFixed(2)} Protected)</strong>.
+      </div>
+      ${lineBreakdownHtml}
+      <div style="font-size:12.5px; font-weight:700; margin-bottom:4px;">1. PII-Scrubbed Invoice Text:</div>
+      <pre style="background:#f1f5f9; padding:10px; border-radius:6px; font-size:12px; overflow-x:auto;">${audit.scrubbedText}</pre>
+      <div style="font-size:12.5px; font-weight:700; margin:10px 0 4px 0;">2. Generated SMS Reply (Added to Top of Tab 1 Queue with Instant SMS/Email Buttons):</div>
+      <div class="sms-preview-box">${audit.generatedSms}</div>
+    `;
+
+    // Sync with cloud_app.py if running online
+    try {
+      await fetch('/api/simulate-mms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: client.phone,
+          rawText: rawText,
+          MessageSid: newMsgId,
+          base64Image: uploadedImageBase64,
+          posBaselineCsv: storePosBaselines[client.slug]
+        })
+      });
+    } catch (err) {}
+
+    showToast(`[Audited] Dynamically audited ${newMsgId} (+$${audit.totalProtected.toFixed(2)} protected) for ${client.biz}!`);
+  }
+
+  function downloadCloudBackup() {
+    const payload = {
+      exported_at: new Date().toISOString(),
+      clients: clients,
+      storePosBaselines: storePosBaselines,
+      mmsQueue: mmsQueue
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'marginvault_cloud_backup.json';
+    a.click();
+    showToast('[Downloaded] Downloaded complete Cloud Database snapshot (<code>marginvault_cloud_backup.json</code>)!');
+  }
+
+  // ============================================================================
+  // TAB 4: FOUNDER ACTIVITY MONITORING & TELEMETRY DASHBOARD LOGIC
+  // ============================================================================
+  let currentTelemetryRange = 'today';
+  let telemetryStatsData = null;
+  let activeTelemetryEventsList = [];
+
+  function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  }
+
+  function changeTelemetryRange(range, btn) {
+    currentTelemetryRange = range;
+    document.querySelectorAll('.range-btn').forEach(b => {
+      b.classList.toggle('active', b.getAttribute('data-range') === range);
+    });
+    fetchAndRenderTelemetry(range);
+  }
+
+  async function fetchAndRenderTelemetry(range) {
+    if (range) currentTelemetryRange = range;
+    const rangeParam = currentTelemetryRange || 'today';
+    const lastSyncEl = document.getElementById('telemetryLastSync');
+    if (lastSyncEl) {
+      const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      lastSyncEl.textContent = `Updated at ${nowStr}`;
+    }
+
+    let cloudSuccess = false;
+    try {
+      const resp = await fetch(`/api/telemetry/stats?range=${encodeURIComponent(rangeParam)}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && data.ok) {
+          telemetryStatsData = data;
+          cloudSuccess = true;
+          renderTelemetryDashboard(data, 'cloud');
+        }
+      }
+    } catch (err) {
+      // Offline / file: / static host
+    }
+
+    if (!cloudSuccess) {
+      const localData = buildLocalTelemetryStats(rangeParam);
+      telemetryStatsData = localData;
+      renderTelemetryDashboard(localData, 'local');
+    }
+  }
+
+  function buildLocalTelemetryStats(rangeParam) {
+    let rawEvents = [];
+    let rawErrors = [];
+    try {
+      const evStr = localStorage.getItem('mv_telemetry_events');
+      if (evStr) {
+        const p = JSON.parse(evStr);
+        if (Array.isArray(p)) rawEvents = p;
+      }
+    } catch (e) {}
+
+    try {
+      const errStr = localStorage.getItem('mv_telemetry_errors');
+      if (errStr) {
+        const p = JSON.parse(errStr);
+        if (Array.isArray(p)) rawErrors = p;
+      }
+    } catch (e) {}
+
+    const now = Date.now();
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const startOfDayMs = startOfDay.getTime();
+    const sevenDaysAgoMs = now - 7 * 86400 * 1000;
+
+    function inRange(item) {
+      const epoch = item.epoch_ms || (item.timestamp ? new Date(item.timestamp).getTime() : 0);
+      if (rangeParam === 'today') return epoch >= startOfDayMs;
+      if (rangeParam === '7d') return epoch >= sevenDaysAgoMs;
+      return true;
+    }
+
+    const filteredEvents = rawEvents.filter(inRange);
+    const filteredErrors = rawErrors.filter(inRange);
+
+    let page_views_total = 0;
+    const page_views_by_page = {};
+    let camera_snaps = 0;
+    let nightdrop_unlocks = 0;
+    let roi_calculations = 0;
+    let signups = 0;
+    const sessionIds = new Set();
+    const storeSlugs = new Set();
+
+    filteredEvents.forEach(ev => {
+      const evType = String(ev.event_type || ev.type || '').toLowerCase();
+      const app = String(ev.app_name || ev.app || '').toLowerCase();
+      const meta = (ev.metadata && typeof ev.metadata === 'object') ? ev.metadata : {};
+
+      if (ev.session_id) sessionIds.add(ev.session_id);
+      if (meta.store || meta.store_slug) storeSlugs.add(meta.store || meta.store_slug);
+
+      if (evType === 'page_view' || evType.includes('page_view')) {
+        page_views_total++;
+        let page = meta.page || meta.path;
+        if (!page) {
+          if (app.includes('snap')) page = 'snap.html';
+          else if (app.includes('gatekeeper')) page = 'gatekeeper.html';
+          else if (app.includes('admin')) page = 'admin.html';
+          else page = 'index.html';
+        }
+        page = String(page).replace(/^\//, '');
+        page_views_by_page[page] = (page_views_by_page[page] || 0) + 1;
+      }
+
+      if (evType.includes('camera') || evType.includes('snap') || evType.includes('invoice')) {
+        camera_snaps++;
+      } else if (evType.includes('nightdrop') || evType.includes('unlock') || evType.includes('door') || evType.includes('strike') || evType.includes('bink') || evType.includes('gatekeeper')) {
+        nightdrop_unlocks++;
+      } else if (evType.includes('roi') || evType.includes('calc')) {
+        roi_calculations++;
+      } else if (evType.includes('signup') || evType.includes('pilot') || evType.includes('add_client')) {
+        signups++;
+      }
+    });
+
+    const errors_by_app = {};
+    const errors_by_severity = {};
+    filteredErrors.forEach(err => {
+      const app = String(err.source_app || err.app_name || 'unknown').replace('marginvault_', '');
+      const sev = String(err.severity || 'ERROR').toUpperCase();
+      errors_by_app[app] = (errors_by_app[app] || 0) + 1;
+      errors_by_severity[sev] = (errors_by_severity[sev] || 0) + 1;
+      if (err.session_id) sessionIds.add(err.session_id);
+    });
+
+    return {
+      ok: true,
+      range: rangeParam,
+      generated_at: new Date().toISOString(),
+      summary: {
+        total_events: filteredEvents.length,
+        page_views: {
+          total: page_views_total,
+          by_page: page_views_by_page
+        },
+        app_usage: {
+          camera_snaps: camera_snaps,
+          nightdrop_unlocks: nightdrop_unlocks,
+          roi_calculations: roi_calculations,
+          signups: signups
+        },
+        errors: {
+          total: filteredErrors.length,
+          by_app: errors_by_app,
+          by_severity: errors_by_severity
+        },
+        unique_sessions: sessionIds.size,
+        unique_stores: storeSlugs.size
+      },
+      recent_events: filteredEvents.slice().reverse().slice(0, 50),
+      recent_errors: filteredErrors.slice().reverse().slice(0, 50)
+    };
+  }
+
+  function renderTelemetryDashboard(data, mode) {
+    if (!data) return;
+    const summary = data.summary || {};
+    const pv = summary.page_views || { total: 0, by_page: {} };
+    const usage = summary.app_usage || { camera_snaps: 0, nightdrop_unlocks: 0, roi_calculations: 0, signups: 0 };
+    const errs = summary.errors || { total: 0, by_app: {}, by_severity: {} };
+
+    // 1. Dual Mode Badge
+    const badge = document.getElementById('telemetryModeBadge');
+    if (badge) {
+      if (mode === 'cloud') {
+        badge.className = 'telemetry-badge badge-cloud';
+        badge.innerHTML = '<span class="status-dot"></span>Live Cloud Stream';
+      } else {
+        badge.className = 'telemetry-badge badge-local';
+        badge.innerHTML = '<span class="status-dot" style="background:#f59e0b;"></span>LocalStorage Fallback';
+      }
+    }
+
+    // 2. KPI 1: Page Views
+    const kpiViews = document.getElementById('telemetryKpiViews');
+    if (kpiViews) kpiViews.textContent = (pv.total || 0).toLocaleString();
+
+    const byPage = pv.by_page || {};
+    const landingViews = byPage['index.html'] || byPage['index'] || 0;
+    const snapViews = byPage['snap.html'] || byPage['snap'] || 0;
+    const gateViews = byPage['gatekeeper.html'] || byPage['gatekeeper'] || 0;
+    const adminViews = byPage['admin.html'] || byPage['admin'] || 0;
+
+    const kpiViewsBreakdown = document.getElementById('telemetryKpiViewsBreakdown');
+    if (kpiViewsBreakdown) {
+      kpiViewsBreakdown.innerHTML = `${landingViews} landing &bull; ${snapViews} snap &bull; ${gateViews} gatekeeper &bull; ${adminViews} admin`;
+    }
+
+    // 3. KPI 2: Core App Actions
+    const totalActions = (usage.camera_snaps || 0) + (usage.nightdrop_unlocks || 0) + (usage.signups || 0) + (usage.roi_calculations || 0);
+    const kpiActions = document.getElementById('telemetryKpiActions');
+    if (kpiActions) kpiActions.textContent = totalActions.toLocaleString();
+
+    const kpiActionsBreakdown = document.getElementById('telemetryKpiActionsBreakdown');
+    if (kpiActionsBreakdown) {
+      kpiActionsBreakdown.innerHTML = `${usage.camera_snaps || 0} snaps &bull; ${usage.nightdrop_unlocks || 0} unlocks &bull; ${usage.signups || 0} signups &bull; ${usage.roi_calculations || 0} calcs`;
+    }
+
+    // 4. KPI 3: Active Stores & Sessions
+    let sessionsCount = summary.unique_sessions;
+    if (sessionsCount == null) {
+      const setSess = new Set();
+      (data.recent_events || []).forEach(e => { if (e.session_id) setSess.add(e.session_id); });
+      (data.recent_errors || []).forEach(e => { if (e.session_id) setSess.add(e.session_id); });
+      sessionsCount = setSess.size || 1;
+    }
+    const kpiSessions = document.getElementById('telemetryKpiSessions');
+    if (kpiSessions) kpiSessions.textContent = `${sessionsCount} Session${sessionsCount === 1 ? '' : 's'}`;
+
+    let storesCount = summary.unique_stores;
+    if (storesCount == null) {
+      const setStores = new Set();
+      (data.recent_events || []).forEach(e => {
+        const m = e.metadata || {};
+        if (m.store || m.store_slug) setStores.add(m.store || m.store_slug);
+      });
+      storesCount = setStores.size || clients.length;
+    }
+    const kpiStores = document.getElementById('telemetryKpiStores');
+    if (kpiStores) kpiStores.textContent = `${storesCount} distinct client store${storesCount === 1 ? '' : 's'}`;
+
+    // 5. KPI 4: System Health & Error Rate
+    const totalErrors = errs.total || 0;
+    const kpiErrors = document.getElementById('telemetryKpiErrors');
+    if (kpiErrors) {
+      kpiErrors.textContent = `${totalErrors} Error${totalErrors === 1 ? '' : 's'}`;
+      if (totalErrors > 0) {
+        kpiErrors.style.color = '#dc2626';
+      } else {
+        kpiErrors.style.color = 'var(--navy)';
+      }
+    }
+
+    const healthStatusEl = document.getElementById('telemetryKpiHealthStatus');
+    if (healthStatusEl) {
+      if (totalErrors === 0) {
+        healthStatusEl.innerHTML = '<span class="health-pill health-clean">Clean System Health</span>';
+      } else if (totalErrors <= 3) {
+        healthStatusEl.innerHTML = `<span class="health-pill health-warn">Minor Warnings (${totalErrors})</span>`;
+      } else {
+        healthStatusEl.innerHTML = `<span class="health-pill health-error">Attention Needed (${totalErrors} errors)</span>`;
+      }
+    }
+
+    // 6. Core App Breakdown Cards
+    const snapsEl = document.getElementById('telemetryBreakdownSnaps');
+    if (snapsEl) snapsEl.textContent = (usage.camera_snaps || 0).toLocaleString();
+
+    const gateEl = document.getElementById('telemetryBreakdownGatekeeper');
+    if (gateEl) gateEl.textContent = (usage.nightdrop_unlocks || 0).toLocaleString();
+
+    const indexEl = document.getElementById('telemetryBreakdownIndex');
+    if (indexEl) indexEl.textContent = `${usage.signups || 0} Signups (${usage.roi_calculations || 0} Calcs)`;
+
+    const adminEl = document.getElementById('telemetryBreakdownAdmin');
+    if (adminEl) adminEl.textContent = `${adminViews} Views`;
+
+    // 7. Error Diagnostics Console
+    const errorCleanState = document.getElementById('telemetryErrorCleanState');
+    const errorTableWrapper = document.getElementById('telemetryErrorTableWrapper');
+    const errorTableBody = document.getElementById('telemetryErrorTableBody');
+
+    const recentErrors = data.recent_errors || [];
+    if (recentErrors.length === 0) {
+      if (errorCleanState) errorCleanState.style.display = 'flex';
+      if (errorTableWrapper) errorTableWrapper.style.display = 'none';
+      if (errorTableBody) errorTableBody.innerHTML = '';
+    } else {
+      if (errorCleanState) errorCleanState.style.display = 'none';
+      if (errorTableWrapper) errorTableWrapper.style.display = 'block';
+      if (errorTableBody) {
+        errorTableBody.innerHTML = recentErrors.map(err => {
+          const dt = err.timestamp ? new Date(err.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' }) : (err.epoch_ms ? new Date(err.epoch_ms).toLocaleTimeString() : 'Recent');
+          const source = (err.source_app || err.app_name || 'unknown').replace('marginvault_', '');
+          const sev = (err.severity || 'ERROR').toUpperCase();
+          const sevClass = sev === 'CRITICAL' || sev === 'ERROR' ? 'sev-error' : (sev === 'WARNING' || sev === 'WARN' ? 'sev-warning' : 'sev-info');
+          const msg = escapeHtml(err.error_message || err.message || 'Unknown runtime error');
+          const stack = err.stack_trace || (err.context && err.context.stack) || '';
+          const contextObj = err.context || {};
+          let detailsHtml = '';
+          if (stack || Object.keys(contextObj).length) {
+            const contextJson = Object.keys(contextObj).length ? JSON.stringify(contextObj, null, 2) : '';
+            detailsHtml = `
+              <details style="margin-top:6px;">
+                <summary style="cursor:pointer; font-size:12px; font-weight:700; color:var(--blue);">View Diagnostic Details</summary>
+                ${stack ? `<pre style="margin:6px 0; font-size:11px; background:#0f172a; color:#f8fafc; padding:8px; border-radius:6px; overflow-x:auto;">${escapeHtml(stack)}</pre>` : ''}
+                ${contextJson ? `<pre style="margin:6px 0; font-size:11px; background:#1e293b; color:#94a3b8; padding:8px; border-radius:6px; overflow-x:auto;">${escapeHtml(contextJson)}</pre>` : ''}
+              </details>
+            `;
+          }
+          return `
+            <tr>
+              <td style="font-family:Consolas, monospace; font-size:12px; color:var(--slate);">${dt}</td>
+              <td><span style="background:var(--navy); color:#fff; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:700;">${escapeHtml(source)}</span></td>
+              <td><span class="sev-badge ${sevClass}">${escapeHtml(sev)}</span></td>
+              <td>
+                <div style="font-weight:700; color:#0f172a; font-size:13px;">${msg}</div>
+                ${detailsHtml}
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    // 8. Live Events Table
+    activeTelemetryEventsList = data.recent_events || [];
+    renderTelemetryEventsTable();
+  }
+
+  function renderTelemetryEventsTable() {
+    const tbody = document.getElementById('telemetryEventsTableBody');
+    if (!tbody) return;
+    const filterInput = document.getElementById('telemetryEventFilter');
+    const query = (filterInput ? filterInput.value : '').trim().toLowerCase();
+
+    const filtered = activeTelemetryEventsList.filter(ev => {
+      if (!query) return true;
+      const type = String(ev.event_type || ev.type || '').toLowerCase();
+      const app = String(ev.app_name || ev.app || '').toLowerCase();
+      const sess = String(ev.session_id || '').toLowerCase();
+      const meta = JSON.stringify(ev.metadata || {}).toLowerCase();
+      return type.includes(query) || app.includes(query) || sess.includes(query) || meta.includes(query);
+    });
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:var(--slate);">No telemetry events found matching the selected filter.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.slice(0, 50).map(ev => {
+      const dt = ev.timestamp ? new Date(ev.timestamp).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' }) : (ev.epoch_ms ? new Date(ev.epoch_ms).toLocaleTimeString() : 'Recent');
+      const app = (ev.app_name || ev.app || 'unknown').replace('marginvault_', '');
+      const type = ev.event_type || ev.type || 'event';
+      const sess = ev.session_id ? String(ev.session_id).substring(0, 14) + '...' : 'anon';
+      const meta = ev.metadata || {};
+      const metaStr = Object.keys(meta).length ? JSON.stringify(meta) : '-';
+      return `
+        <tr>
+          <td style="font-family:Consolas, monospace; font-size:12px; color:var(--slate);">${dt}</td>
+          <td><span style="background:var(--navy); color:#38bdf8; padding:2px 8px; border-radius:4px; font-size:11.5px; font-weight:700;">${escapeHtml(app)}</span></td>
+          <td><code style="color:#059669; font-weight:700; font-size:12.5px;">${escapeHtml(type)}</code></td>
+          <td style="font-family:Consolas, monospace; font-size:12px; color:var(--slate);">${escapeHtml(sess)}</td>
+          <td style="font-size:12px; color:var(--slate); max-width:380px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(metaStr)}">${escapeHtml(metaStr)}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function refreshTelemetry() {
+    fetchAndRenderTelemetry(currentTelemetryRange);
+    showToast('[Refreshed] Telemetry dashboard refreshed with latest records.');
+  }
+
+  function exportTelemetryJson() {
+    let localEvents = [];
+    let localErrors = [];
+    try { localEvents = JSON.parse(localStorage.getItem('mv_telemetry_events') || '[]'); } catch (e) {}
+    try { localErrors = JSON.parse(localStorage.getItem('mv_telemetry_errors') || '[]'); } catch (e) {}
+
+    const payload = {
+      exported_at: new Date().toISOString(),
+      active_range: currentTelemetryRange,
+      current_dashboard_summary: telemetryStatsData ? telemetryStatsData.summary : null,
+      local_storage_events: localEvents,
+      local_storage_errors: localErrors,
+      cloud_events_snapshot: telemetryStatsData ? telemetryStatsData.recent_events : []
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `marginvault_telemetry_${currentTelemetryRange}_${Date.now()}.json`;
+    a.click();
+    showToast('[Exported] Telemetry JSON exported to local downloads.');
+  }
+
+  function clearTelemetryLogs() {
+    try {
+      localStorage.removeItem('mv_telemetry_events');
+      localStorage.removeItem('mv_telemetry_errors');
+    } catch (e) {}
+    if (window.mvTelemetry && typeof window.mvTelemetry.clearLocal === 'function') {
+      window.mvTelemetry.clearLocal();
+    }
+    fetchAndRenderTelemetry(currentTelemetryRange);
+    showToast('[Cleared] Local telemetry events and errors reset.');
+  }
+
+  // Try connecting to live cloud_app.py API (/api/state), fallback to localStorage + embedded state
+  async function syncWithCloudBackend() {
+    try {
+      const savedBaselines = localStorage.getItem('mv_pos_baselines');
+      if (savedBaselines) {
+        Object.assign(storePosBaselines, JSON.parse(savedBaselines));
+      }
+    } catch (e) {}
+
+    // 1. Load & merge shared localStorage state from index.html & snap.html
+    loadSharedStateFromLocalStorage();
+
+    // 2. Also sync with cloud_app.py if running online
+    try {
+      const resp = await fetch('/api/state');
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.clients && data.clients.length) {
+          data.clients.forEach(sc => {
+            if (!clients.some(c => c.slug === sc.slug || c.phone === sc.phone)) {
+              clients.push(sc);
+            }
+          });
+        }
+        if (data.mmsQueue && data.mmsQueue.length) {
+          data.mmsQueue.forEach(sm => {
+            const existing = mmsQueue.find(m => m.id === sm.id);
+            if (!existing) {
+              mmsQueue.unshift(sm);
+            } else {
+              // Ensure status updates (PENDING_APPROVAL -> SENT) propagate
+              if (sm.status && sm.status !== existing.status) {
+                existing.status = sm.status;
+              }
+              if (sm.smsText && existing.status !== 'SENT') {
+                existing.smsText = sm.smsText;
+              }
+              if (sm.foundAmount != null && sm.foundAmount > 0) {
+                existing.foundAmount = sm.foundAmount;
+              }
+              if (sm.vendor) {
+                existing.vendor = sm.vendor;
+              }
+            }
+          });
+        }
+        saveSharedStateToLocalStorage();
+        document.getElementById('cloudStatusText').textContent = '24/7 CLOUD DB CONNECTED';
+      }
+    } catch (err) {
+      // Running directly via file:// or static hosting
+    }
+    renderClients();
+    renderMmsQueue();
+    fetchAndRenderTelemetry(currentTelemetryRange);
+  }
+
+  // Listen for live cross-tab updates from snap.html or index.html
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'mv_shared_clients' || e.key === 'mv_shared_mms_queue' || e.key === 'mv_pos_baselines') {
+      loadSharedStateFromLocalStorage();
+      renderClients();
+      renderMmsQueue();
+      showToast('[Live Sync] Updated from Client 1-Tap Snap App / Public Signup!');
+    }
+    if (e.key === 'mv_telemetry_events' || e.key === 'mv_telemetry_errors') {
+      fetchAndRenderTelemetry(currentTelemetryRange);
+    }
+  });
+
+  // Initialize on load
+  checkFounderLockState();
+  syncWithCloudBackend();
+  fetchAndRenderTelemetry(currentTelemetryRange);
+</script>
+</body>
+</html>

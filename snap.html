@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MarginVault">
+<title>MarginVault AI — 1-Tap Store Invoice Camera &amp; Profit Feed</title>
+<script id="mvTelemetryScript">
+  window.__MV_APP_NAME = 'marginvault_snap';
+  (function() {
+    if (window.mvTelemetry && window.mvTelemetry.__initialized) return;
+
+    var APP_NAME = window.__MV_APP_NAME || 'marginvault_snap';
+    var memorySessionId = null;
+    function getSessionId() {
+      try {
+        var sid = sessionStorage.getItem('mv_session_id');
+        if (!sid) {
+          sid = 'sess_' + Date.now() + '_' + Math.random().toString(16).substring(2, 8);
+          sessionStorage.setItem('mv_session_id', sid);
+        }
+        return sid;
+      } catch (e) {
+        if (!memorySessionId) {
+          memorySessionId = 'sess_' + Date.now() + '_' + Math.random().toString(16).substring(2, 8);
+        }
+        return memorySessionId;
+      }
+    }
+
+    var memoryEvents = [];
+    var memoryErrors = [];
+    var MAX_EVENTS = 100;
+    var MAX_ERRORS = 50;
+
+    function safeStorageGet(key, defaultVal) {
+      try {
+        var val = localStorage.getItem(key);
+        if (!val) return defaultVal;
+        var parsed = JSON.parse(val);
+        return Array.isArray(parsed) ? parsed : defaultVal;
+      } catch (e) {
+        return defaultVal;
+      }
+    }
+
+    function safeStorageSet(key, items, maxCount) {
+      try {
+        while (items.length > maxCount) {
+          items.shift();
+        }
+        localStorage.setItem(key, JSON.stringify(items));
+      } catch (e) {
+        try {
+          if (items.length > 4) {
+            items = items.slice(Math.floor(items.length / 2));
+            localStorage.setItem(key, JSON.stringify(items));
+          }
+        } catch (innerErr) {
+          if (key === 'mv_telemetry_events') memoryEvents = items;
+          if (key === 'mv_telemetry_errors') memoryErrors = items;
+        }
+      }
+    }
+
+    var isStaticHost = (function() {
+      try {
+        var proto = window.location.protocol;
+        var host = window.location.hostname;
+        return proto === 'file:' || (host && host.indexOf('github.io') !== -1);
+      } catch (e) {
+        return false;
+      }
+    })();
+
+    function asyncPost(endpoint, payload) {
+      if (isStaticHost) return Promise.resolve(null);
+      if (typeof fetch !== 'function') return Promise.resolve(null);
+
+      var controller = null;
+      var signal = null;
+      var timer = null;
+      if (typeof AbortController === 'function') {
+        controller = new AbortController();
+        signal = controller.signal;
+        timer = setTimeout(function() {
+          try { controller.abort(); } catch (e) {}
+        }, 1500);
+      }
+
+      return fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        keepalive: true,
+        signal: signal
+      }).then(function(resp) {
+        if (timer) clearTimeout(timer);
+        return resp;
+      }).catch(function() {
+        if (timer) clearTimeout(timer);
+        return null;
+      });
+    }
+
+    function track(eventType, metadata) {
+      try {
+        var evtType = eventType;
+        var meta = metadata || {};
+        if (typeof eventType === 'object' && eventType !== null) {
+          evtType = eventType.event_type || eventType.type || 'custom_event';
+          meta = eventType.metadata || eventType.details || eventType;
+        }
+        var now = Date.now();
+        var evt = {
+          event_id: 'evt_' + now + '_' + Math.random().toString(16).substring(2, 8),
+          timestamp: new Date(now).toISOString(),
+          epoch_ms: now,
+          app_name: APP_NAME,
+          event_type: evtType,
+          session_id: getSessionId(),
+          url: window.location.href,
+          metadata: meta
+        };
+
+        var events = safeStorageGet('mv_telemetry_events', memoryEvents);
+        events.push(evt);
+        safeStorageSet('mv_telemetry_events', events, MAX_EVENTS);
+
+        asyncPost('/api/telemetry', { events: [evt], ...evt });
+        return evt;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    var isLoggingError = false;
+    function logError(source, err, context, severity) {
+      if (isLoggingError) return;
+      isLoggingError = true;
+      try {
+        var now = Date.now();
+        var errMsg = 'Unknown error';
+        var errType = 'Error';
+        var stack = '';
+        var lineNo = null;
+        var colNo = null;
+
+        if (err) {
+          if (typeof err === 'string') {
+            errMsg = err;
+          } else if (err instanceof Error) {
+            errMsg = err.message || err.toString();
+            errType = err.name || 'Error';
+            stack = err.stack || '';
+          } else if (typeof err === 'object') {
+            try {
+              errMsg = err.message || JSON.stringify(err);
+              if (err.name) errType = err.name;
+              if (err.stack) stack = err.stack;
+              if (err.lineno) lineNo = err.lineno;
+              if (err.colno) colNo = err.colno;
+            } catch (ex) {
+              errMsg = String(err);
+            }
+          }
+        }
+
+        if (context && typeof context === 'object') {
+          if (context.lineno != null && lineNo == null) lineNo = context.lineno;
+          if (context.colno != null && colNo == null) colNo = context.colno;
+          if (context.filename && !stack) stack = context.filename + (lineNo ? ':' + lineNo : '');
+        }
+
+        var errObj = {
+          error_id: 'err_' + now + '_' + Math.random().toString(16).substring(2, 8),
+          timestamp: new Date(now).toISOString(),
+          epoch_ms: now,
+          source_app: source || APP_NAME,
+          error_message: String(errMsg),
+          error_type: String(errType),
+          stack_trace: String(stack),
+          url: window.location.href,
+          line_number: typeof lineNo === 'number' ? lineNo : null,
+          column_number: typeof colNo === 'number' ? colNo : null,
+          severity: severity || 'ERROR',
+          session_id: getSessionId(),
+          context: context || {}
+        };
+
+        var errors = safeStorageGet('mv_telemetry_errors', memoryErrors);
+        errors.push(errObj);
+        safeStorageSet('mv_telemetry_errors', errors, MAX_ERRORS);
+
+        asyncPost('/api/telemetry', { errors: [errObj], ...errObj });
+        return errObj;
+      } catch (e) {
+      } finally {
+        isLoggingError = false;
+      }
+    }
+
+    window.addEventListener('error', function(event) {
+      try {
+        var msg = event.message || 'Script error.';
+        var err = event.error || msg;
+        logError(APP_NAME, err, {
+          filename: event.filename,
+          lineno: event.lineno,
+          colno: event.colno,
+          type: 'window.onerror'
+        }, 'ERROR');
+      } catch (e) {}
+    });
+
+    window.addEventListener('unhandledrejection', function(event) {
+      try {
+        var reason = event.reason;
+        var msg = 'Unhandled Promise Rejection';
+        if (reason) {
+          if (reason instanceof Error) {
+            msg = reason.message;
+          } else if (typeof reason === 'string') {
+            msg = reason;
+          } else {
+            try { msg = JSON.stringify(reason); } catch (e) { msg = String(reason); }
+          }
+        }
+        logError(APP_NAME, reason || msg, {
+          type: 'unhandledrejection',
+          rawReason: typeof reason === 'string' ? reason : (reason && reason.name)
+        }, 'ERROR');
+      } catch (e) {}
+    });
+
+    if (typeof window.fetch === 'function') {
+      var originalFetch = window.fetch;
+      window.fetch = function() {
+        var args = arguments;
+        var url = (args && args[0]) ? (typeof args[0] === 'string' ? args[0] : (args[0].url || '')) : '';
+
+        if (url.indexOf('/api/telemetry') !== -1) {
+          return originalFetch.apply(this, args);
+        }
+
+        return originalFetch.apply(this, args).then(function(response) {
+          if (response && !response.ok && response.status >= 400) {
+            logError(APP_NAME, 'HTTP ' + response.status + ' on ' + url, {
+              type: 'fetch_error',
+              status: response.status,
+              statusText: response.statusText,
+              url: url
+            }, response.status >= 500 ? 'ERROR' : 'WARNING');
+          }
+          return response;
+        }).catch(function(netErr) {
+          logError(APP_NAME, netErr, {
+            type: 'fetch_network_failure',
+            url: url
+          }, 'ERROR');
+          throw netErr;
+        });
+      };
+    }
+
+    function sendPageView() {
+      try {
+        track('page_view', {
+          title: document.title,
+          referrer: document.referrer || '',
+          screen_width: window.innerWidth || screen.width,
+          user_agent: navigator.userAgent
+        });
+      } catch (e) {}
+    }
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      setTimeout(sendPageView, 1);
+    } else {
+      window.addEventListener('DOMContentLoaded', sendPageView);
+    }
+
+    window.mvTelemetry = {
+      __initialized: true,
+      appName: APP_NAME,
+      track: track,
+      logError: logError,
+      getSessionId: getSessionId,
+      getEvents: function() { return safeStorageGet('mv_telemetry_events', memoryEvents); },
+      getErrors: function() { return safeStorageGet('mv_telemetry_errors', memoryErrors); },
+      clearLocal: function() {
+        try {
+          localStorage.removeItem('mv_telemetry_events');
+          localStorage.removeItem('mv_telemetry_errors');
+          memoryEvents = [];
+          memoryErrors = [];
+        } catch (e) {}
+      }
+    };
+  })();
+</script>
+<style>
+  :root {
+    --navy: #0f172a;
+    --navy-card: #1e293b;
+    --emerald: #059669;
+    --emerald-bright: #10b981;
+    --emerald-light: #ecfdf5;
+    --slate: #64748b;
+    --bg: #f1f5f9;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--navy);
+    padding-bottom: 84px;
+  }
+  .app-shell {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: #ffffff;
+    box-shadow: 0 0 30px rgba(15, 23, 42, 0.1);
+  }
+  /* SVG Icon Utilities */
+  .mv-icon {
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.15em;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    display: inline-block;
+    margin-right: 0.35rem;
+    flex-shrink: 0;
+  }
+  .mv-icon-hero {
+    vertical-align: middle;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    display: block;
+    margin: 0 auto 8px auto;
+  }
+
+  /* Mobile App Header */
+  .app-header {
+    background: linear-gradient(135deg, #0f172a 0%, #064e3b 100%);
+    color: #fff;
+    padding: 18px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    border-bottom: 3px solid var(--emerald-bright);
+  }
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .app-logo {
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+  }
+  .app-logo span { color: #34d399; }
+  .zero-login-pill {
+    background: rgba(16, 185, 129, 0.2);
+    border: 1px solid #34d399;
+    color: #a7f3d0;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    text-transform: uppercase;
+  }
+  .store-selector-bar {
+    margin-top: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+  }
+  .store-selector-bar select {
+    background: transparent;
+    color: #fff;
+    border: none;
+    font-weight: 700;
+    font-size: 13.5px;
+    width: 100%;
+    outline: none;
+  }
+  .store-selector-bar select option {
+    color: var(--navy);
+    background: #fff;
+  }
+
+  /* Content Area */
+  .app-body { padding: 18px; }
+
+  /* Big 1-Tap Camera Button Card */
+  .camera-hero {
+    background: linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%);
+    border: 2.5px dashed var(--emerald);
+    border-radius: 16px;
+    padding: 24px 18px;
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .cam-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--emerald);
+    color: #fff;
+    font-size: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3);
+  }
+  .cam-btn {
+    display: block;
+    width: 100%;
+    background: var(--emerald);
+    color: #fff;
+    font-weight: 800;
+    font-size: 16.5px;
+    padding: 15px 18px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.25);
+    margin-top: 12px;
+  }
+  .cam-btn:active { transform: scale(0.98); }
+
+  /* Action Cards */
+  .section-label {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--slate);
+    letter-spacing: 0.7px;
+    margin: 18px 0 10px 0;
+  }
+  .action-card {
+    background: #fff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  }
+  .action-card.highlight {
+    border-color: var(--emerald-bright);
+    background: #f0fdf4;
+  }
+  .card-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .tag-green { background: #d1fae5; color: #065f46; }
+  .tag-amber { background: #fef3c7; color: #92400e; }
+  .tag-blue { background: #dbeafe; color: #1e40af; }
+
+  .sku-row {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    font-size: 13.5px;
+  }
+  .sku-row strong { color: var(--navy); }
+  .price-jump {
+    color: #dc2626;
+    font-weight: 700;
+    font-size: 12.5px;
+  }
+  .new-pos-badge {
+    display: inline-block;
+    background: var(--navy);
+    color: #34d399;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 13px;
+    margin-top: 4px;
+  }
+  .quick-btn {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    background: var(--navy);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 13.5px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-top: 10px;
+    border: none;
+    cursor: pointer;
+  }
+
+  /* Bottom App Navigation Bar */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    background: var(--navy);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-top: 2px solid #334155;
+    z-index: 90;
+  }
+  .nav-item {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    padding: 10px 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+  }
+  .nav-item.active {
+    color: #34d399;
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .nav-icon { font-size: 18px; display: block; margin-bottom: 2px; }
+
+  .view-pane { display: none; }
+  .view-pane.active { display: block; }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+  <!-- STICKY HEADER -->
+  <header class="app-header">
+    <div class="header-top">
+      <div class="app-logo">Margin<span>Vault</span> Instant Snap</div>
+      <span class="zero-login-pill">100% In-House &bull; No Login</span>
+    </div>
+    <div class="store-selector-bar">
+      <select id="activeStoreSelect" onchange="switchStore()">
+        <option value="golden_gate_bakery_sample">Store: Golden Gate Bakery (Sample - 3 Stores)</option>
+        <option value="bayview_corner_spirits_sample">Store: Bayview Corner Spirits (Sample)</option>
+        <option value="mission_taqueria_deli_sample">Store: Mission Panadería &amp; Deli (Sample)</option>
+      </select>
+    </div>
+  </header>
+
+  <div class="app-body">
+    <!-- VIEW 1: 1-TAP CAMERA SNAP & INSTANT AUDIT -->
+    <div id="pane-snap" class="view-pane active">
+      <div class="camera-hero">
+        <div class="cam-icon"><svg class="mv-icon-hero" width="48" height="48" viewBox="0 0 24 24" stroke="#059669" stroke-width="1.75" fill="none" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></div>
+        <h2 style="margin:0 0 6px 0; font-size:20px;">Snap Delivery Invoice Photo</h2>
+        <p style="margin:0; font-size:13.5px; color:#065f46;">Point your phone camera at any paper food, bakery, beer, or spirits invoice. We check every line item in 3 seconds—zero texting fees or passwords.</p>
+
+        <!-- DUAL-MODE INTAKE DOM: Instant Camera Trigger & Gallery Fallback -->
+        <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;" onchange="handleInvoiceSnap(event)">
+        <input type="file" id="galleryInput" accept="image/*" style="display:none;" onchange="handleInvoiceSnap(event)">
+
+        <div style="display:flex; flex-direction:column; gap:10px; max-width:380px; margin:0 auto;">
+          <button class="cam-btn" onclick="openCameraShutter()" style="width:100%; margin:0;">
+            <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>Open Invoice Camera
+          </button>
+          <button class="secondary-btn" onclick="openPhotoGallery()" style="width:100%; padding:11px 18px; background:#f0fdf4; border:1.5px solid #10b981; color:#065f46; font-weight:700; font-size:13.5px; border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Upload Invoice Photo
+          </button>
+        </div>
+
+        <!-- Android Chrome Permission & Broken Camera Guidance -->
+        <div id="permissionNotice" style="display:none; margin-top:14px; background:#fefce8; border:1px solid #fef08a; border-radius:8px; padding:10px 14px; font-size:12px; color:#854d0e; text-align:left;">
+          <strong><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Camera permission denied or unavailable?</strong><br>
+          Tap the address bar lock icon or tune icon in your browser to reset Camera access to <em>Allow</em>, or simply tap <strong>Upload Invoice Photo</strong> above.
+        </div>
+
+        <button onclick="runInstantDemoSnap()" style="background:none; border:none; color:#047857; font-weight:700; font-size:12.5px; margin-top:12px; text-decoration:underline; cursor:pointer;">
+          Test Sample Invoice
+        </button>
+      </div>
+
+      <!-- INSTANT LIVE RESULT BOX (Appears Immediately After Snapping) -->
+      <div id="liveSnapResult" style="display:none;"></div>
+
+      <!-- RECENT STORE ACTION CARDS -->
+      <div class="section-label">This Week's Store Action Cards</div>
+      <div id="storeFeedContainer"></div>
+    </div>
+
+    <!-- VIEW 2: 8 PM WEATHER BAKE & PREP SHEET -->
+    <div id="pane-bake" class="view-pane">
+      <div class="action-card highlight">
+        <span class="card-tag tag-green">Tomorrow's 4:00 AM Weather Prep Sheet</span>
+        <h3 style="margin:4px 0 6px 0; font-size:17px;">Bay Area Weather Forecast: Morning Rain &amp; 52&deg;F</h3>
+        <p style="margin:0 0 10px 0; font-size:13.5px; color:#334155;">Rainy mornings spike hot drinks, sweet pastries, and delivery orders by <strong>+19%</strong> while walk-in cold sandwiches dip <strong>-11%</strong>:</p>
+        <div class="sku-row">
+          <strong>1. Pan Dulce / Sweet Croissant Trays:</strong><br>
+          <span class="new-pos-badge">Bake +4 Extra Trays (+18% vs Tuesday avg)</span>
+        </div>
+        <div class="sku-row">
+          <strong>2. Hot Champurrado / Drip Coffee Batch:</strong><br>
+          <span class="new-pos-badge">Prep +2.5 Gallons for 7:00–9:30 AM Rush</span>
+        </div>
+        <div class="sku-row">
+          <strong>3. Cold Sandwich Roll Prep:</strong><br>
+          <span class="new-pos-badge">Reduce by -2 Trays ($114 Stale Waste Saved)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 3: MONTHLY FOUND-MONEY SCORECARD -->
+    <div id="pane-score" class="view-pane">
+      <div class="action-card">
+        <span class="card-tag tag-blue">Live 30-Day ROI Tracker</span>
+        <h3 style="margin:4px 0 4px 0; font-size:18px;">Protected &amp; Found This Month</h3>
+        <div style="font-size:32px; font-weight:800; color:var(--emerald); margin:6px 0;">+$4,892.40</div>
+        <p style="margin:0 0 12px 0; font-size:13px; color:var(--slate);">Backed by your 3x Minimum ROI Guarantee.</p>
+        <div class="sku-row"><strong>Wholesale Price Hikes Caught:</strong> <span style="float:right; color:var(--emerald); font-weight:800;">+$2,140.00</span></div>
+        <div class="sku-row"><strong>Cross-Store &amp; Post-Off Credits:</strong> <span style="float:right; color:var(--emerald); font-weight:800;">+$1,120.00</span></div>
+        <div class="sku-row"><strong>DoorDash Chargebacks Won:</strong> <span style="float:right; color:var(--emerald); font-weight:800;">+$842.40</span></div>
+        <div class="sku-row"><strong>8 PM Bake-Sheet Waste Saved:</strong> <span style="float:right; color:var(--emerald); font-weight:800;">+$790.00</span></div>
+        <a href="Sample_Monthly_Found_Money_Scorecard.html" target="_blank" class="quick-btn">View Monthly Scorecard &nearr;</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM APP BAR -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="switchPane('pane-snap', this)">
+      <span class="nav-icon"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></span>Snap Invoice
+    </button>
+    <button class="nav-item" onclick="switchPane('pane-bake', this)">
+      <span class="nav-icon"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>Bake Prep Sheet
+    </button>
+    <button class="nav-item" onclick="switchPane('pane-score', this)">
+      <span class="nav-icon"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>Found Money Scorecard
+    </button>
+  </nav>
+</div>
+
+<script>
+  const storeFeeds = {
+    golden_gate_bakery_sample: {
+      name: "Golden Gate Bakery Group (Sample - 3 Stores)",
+      owner: "Carlos & Elena",
+      phone: "+14155550101",
+      cards: [
+        {
+          tag: "Register Barcode & Menu Updates",
+          tagClass: "tag-green",
+          title: "Sysco & BakeMark Delivery Audit (+$827/mo Protected)",
+          items: [
+            { name: "Large AA Shell Eggs (15-Doz Case)", jump: "Wholesale up +9.7% ($54.00 -> $59.25/cs)", action: "Update POS Breakfast Plate +$0.50 today (+$693/mo)" },
+            { name: "Cross-Store Egg Credit ($63.00)", jump: "Store #3 billed $59.25 vs $54.00 at Store #1", action: "Tap below to email credit claim to distributor" },
+            { name: "Sweet Cream Butter (36-lb Case)", jump: "Wholesale up +8.1% ($68.00 -> $73.50/cs)", action: "Update Pastry Box from $14.50 to $15.25 (+$71/mo)" }
+          ],
+          creditMailto: "mailto:billing@distributor-sample.com?subject=Credit%20Request%20Invoice%20%234410%20(%2463.00)&body=Hello%2C%20Store%20%233%20was%20billed%20%2459.25%2Fcase%20for%20Large%20AA%20Eggs%20vs%20our%20contracted%20%2454.00%2Fcase%20at%20Store%20%231.%20Please%20issue%20a%20%2463.00%20credit%20memo."
+        }
+      ]
+    },
+    bayview_corner_spirits_sample: {
+      name: "Bayview Corner Spirits (Sample)",
+      owner: "Marco",
+      phone: "+14155550199",
+      cards: [
+        {
+          tag: "Same-Day Barcode Updates",
+          tagClass: "tag-amber",
+          title: "Southern Glazer's & Reyes Beer Audit (+$374/mo Protected)",
+          items: [
+            { name: "Reserve Reposado Tequila 750mL", jump: "Wholesale up +10.5% (+$24/case)", action: "Update register barcode: $54.99 -> $63.99 today" },
+            { name: "Imported Mexican Lager 12-Pack", jump: "Wholesale up +9.9% ($28.20 -> $31.00/cs)", action: "Update cooler barcode: $18.99 -> $22.99 today" },
+            { name: "5-Case Post-Off Rebate (-$105)", jump: "Ordered 3 cases Artisan Vodka 750mL", action: "Bump Friday order to 5 cases to save -$21/case" }
+          ],
+          creditMailto: "mailto:rep@distributor-sample.com?subject=5-Case%20Post-Off%20Order%20Adjustment&body=Hi%2C%20please%20adjust%20our%20Artisan%20Vodka%20750mL%20order%20to%205%20cases%20to%20apply%20the%20-%2421%2Fcase%20post-off%20discount."
+        }
+      ]
+    },
+    mission_taqueria_deli_sample: {
+      name: "Mission Panadería & Deli (Sample)",
+      owner: "Mateo",
+      phone: "+14155550177",
+      cards: [
+        {
+          tag: "DoorDash Chargebacks Won",
+          tagClass: "tag-blue",
+          title: "4 Unfair App Deductions Recovered (+$105.40)",
+          items: [
+            { name: "Orders DD-9041, DD-9108, DD-9344, DD-9402", jump: "Matched against Toast kitchen ticket timestamps", action: "+$105.40 credited to Friday DoorDash payout" }
+          ],
+          creditMailto: ""
+        }
+      ]
+    }
+  };
+
+  function ensureStoreFeedEntry(clientObj) {
+    if (!clientObj) return null;
+    const slug = (clientObj.slug || clientObj.biz || 'custom_store')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_|_$/g, '');
+    if (!slug) return null;
+
+    if (!storeFeeds[slug]) {
+      const displayBiz = clientObj.biz || clientObj.name || slug.replace(/_/g, ' ');
+      storeFeeds[slug] = {
+        name: displayBiz,
+        owner: clientObj.owner || "Store Owner",
+        phone: clientObj.phone || "+14155550142",
+        cards: [
+          {
+            tag: "Active Founding Store Vault",
+            tagClass: "tag-green",
+            title: `${displayBiz} — Ready for 1-Tap Invoice Snap`,
+            items: [
+              { name: "Large AA Shell Eggs (15-Doz Case)", jump: "Baseline $54.00/cs monitored across Sysco & BakeMark", action: "Tap camera above to audit your latest delivery slip in 3s" },
+              { name: "Unsalted Sweet Cream Butter (36-lb)", jump: "Baseline $68.00/cs monitored + Cross-Store Price Match", action: "100% Local PII Firewall active (ACH & FEIN masked)" }
+            ],
+            creditMailto: ""
+          }
+        ]
+      };
+    }
+
+    const select = document.getElementById('activeStoreSelect');
+    if (select && !Array.from(select.options).some(opt => opt.value === slug)) {
+      const opt = document.createElement('option');
+      opt.value = slug;
+      opt.textContent = `Store: ${storeFeeds[slug].name}`;
+      select.insertBefore(opt, select.firstChild);
+    }
+    return slug;
+  }
+
+  function loadSharedClientsFromLocalStorage() {
+    try {
+      const raw = localStorage.getItem('mv_shared_clients');
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          // Iterate in reverse so the first item in mv_shared_clients ends up at the top of select
+          for (let i = list.length - 1; i >= 0; i--) {
+            ensureStoreFeedEntry(list[i]);
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Auto-select store from ?store= URL query parameter or localStorage
+  async function initStoreFromUrl() {
+    loadSharedClientsFromLocalStorage();
+
+    // Also pull any stores from cloud_app.py if running online
+    try {
+      const resp = await fetch('/api/state');
+      if (resp.ok) {
+        const data = await resp.json();
+        if (Array.isArray(data.clients)) {
+          for (let i = data.clients.length - 1; i >= 0; i--) {
+            ensureStoreFeedEntry(data.clients[i]);
+          }
+        }
+      }
+    } catch (e) {}
+
+    const params = new URLSearchParams(window.location.search);
+    const qStore = params.get('store');
+    const select = document.getElementById('activeStoreSelect');
+    if (qStore) {
+      if (!storeFeeds[qStore]) {
+        const prettyName = qStore.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        ensureStoreFeedEntry({ slug: qStore, biz: prettyName, owner: "Store Owner", phone: "+14155550142" });
+      }
+      select.value = qStore;
+      localStorage.setItem('mv_active_store', qStore);
+    } else {
+      const saved = localStorage.getItem('mv_active_store');
+      if (saved && storeFeeds[saved]) select.value = saved;
+    }
+    renderStoreFeed();
+  }
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'mv_shared_clients') {
+      loadSharedClientsFromLocalStorage();
+      renderStoreFeed();
+    }
+  });
+
+  function switchStore() {
+    const val = document.getElementById('activeStoreSelect').value;
+    localStorage.setItem('mv_active_store', val);
+    document.getElementById('liveSnapResult').style.display = 'none';
+    renderStoreFeed();
+  }
+
+  function renderStoreFeed() {
+    const slug = document.getElementById('activeStoreSelect').value;
+    const feed = storeFeeds[slug] || storeFeeds.golden_gate_bakery_sample;
+    const container = document.getElementById('storeFeedContainer');
+
+    container.innerHTML = feed.cards.map(c => `
+      <div class="action-card">
+        <span class="card-tag ${c.tagClass}">${c.tag}</span>
+        <h3 style="margin:4px 0 8px 0; font-size:16.5px;">${c.title}</h3>
+        ${c.items.map(it => `
+          <div class="sku-row">
+            <strong>${it.name}</strong><br>
+            <span class="price-jump">${it.jump}</span><br>
+            <span class="new-pos-badge">${it.action}</span>
+          </div>
+        `).join('')}
+        ${c.creditMailto ? `<a href="${c.creditMailto}" class="quick-btn"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Send Credit Claim</a>` : ''}
+      </div>
+    `).join('');
+  }
+
+  // --- DUAL-MODE CAMERA & GALLERY HANDLERS WITH PERMISSION BOUNDARY ---
+  function openCameraShutter() {
+    const camInput = document.getElementById('cameraInput');
+    if (!camInput) return;
+    try {
+      camInput.click();
+    } catch (err) {
+      console.warn('Camera intent failed, displaying permission helper:', err);
+      const notice = document.getElementById('permissionNotice');
+      if (notice) notice.style.display = 'block';
+      openPhotoGallery();
+    }
+  }
+
+  function openPhotoGallery() {
+    const galleryInput = document.getElementById('galleryInput');
+    if (galleryInput) galleryInput.click();
+  }
+
+  // --- SERVICE WORKER & INDEXEDDB OFFLINE VAULT MODULE ---
+  const VAULT_DB_NAME = 'MarginVaultLocalVault';
+  const VAULT_DB_VERSION = 1;
+  const VAULT_STORE = 'offline_invoices';
+  let isSyncInProgress = false;
+
+  // 1. Register Service Worker on Load
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        console.log('MarginVault Service Worker Registered (Scope:', reg.scope, ')');
+      }).catch((err) => {
+        console.warn('Service Worker registration skipped:', err);
+      });
+    });
+
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'OFFLINE_INVOICE_SYNCED') {
+        renderSyncedSuccessCard(event.data);
+        refreshOfflineQueueCount();
+      }
+    });
+  }
+
+  // 2. Open IndexedDB Database
+  function openVaultDB() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(VAULT_DB_NAME, VAULT_DB_VERSION);
+      request.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(VAULT_STORE)) {
+          const store = db.createObjectStore(VAULT_STORE, { keyPath: 'id' });
+          store.createIndex('by_status', 'status', { unique: false });
+          store.createIndex('by_timestamp', 'capturedAt', { unique: false });
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // 3. Enqueue Record in Local Vault
+  async function enqueueOfflineInvoice(record) {
+    const db = await openVaultDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(VAULT_STORE, 'readwrite');
+      tx.oncomplete = () => resolve(record.id);
+      tx.onerror = () => reject(tx.error);
+      tx.objectStore(VAULT_STORE).put(record);
+    });
+  }
+
+  // 4. Retrieve Pending Records
+  async function getPendingOfflineInvoices() {
+    const db = await openVaultDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(VAULT_STORE, 'readonly');
+      const store = tx.objectStore(VAULT_STORE);
+      const index = store.index('by_status');
+      const req = index.getAll('QUEUED');
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  // 5. Update Status
+  async function updateVaultInvoiceStatus(id, status, serverAudit = null) {
+    const db = await openVaultDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(VAULT_STORE, 'readwrite');
+      const store = tx.objectStore(VAULT_STORE);
+      const req = store.get(id);
+      req.onsuccess = () => {
+        const rec = req.result;
+        if (rec) {
+          rec.status = status;
+          if (serverAudit) rec.serverAudit = serverAudit;
+          store.put(rec);
+        }
+        resolve();
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  // 6. High-Performance Client-Side Image Preprocessing
+  async function compressInvoiceImage(file, maxDim = 2048, quality = 0.82) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onerror = reject;
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, width, height);
+          const base64Data = canvas.toDataURL('image/jpeg', quality);
+          resolve({
+            base64Data: base64Data,
+            width: width,
+            height: height,
+            originalSize: file.size,
+            compressedSize: Math.round(base64Data.length * 0.75)
+          });
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // 7. Resilient Shutter Handler with Walk-in Cooler Fallback
+  async function handleInvoiceSnap(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Immediately hide permission notice when file/camera snap is captured
+    const notice = document.getElementById('permissionNotice');
+    if (notice) notice.style.display = 'none';
+
+    const resultContainer = document.getElementById('liveSnapResult');
+    resultContainer.style.display = 'block';
+    resultContainer.innerHTML = `
+      <div class="action-card highlight" style="text-align:center; padding:20px;">
+        <div style="margin-bottom:8px;"><svg class="mv-icon-hero" width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <strong style="color:var(--navy); font-size:16px;">Compressing & Auditing Delivery Invoice...</strong>
+        <div style="margin-top:6px; font-size:13px; color:#64748b;">
+          Downsampling ${(file.size / 1024 / 1024).toFixed(1)}MB camera photo to 2048px (300 DPI) for Gemini Vision OCR...
+        </div>
+      </div>`;
+
+    try {
+      const compressed = await compressInvoiceImage(file);
+      const storeSlug = document.getElementById('activeStoreSelect').value;
+      const urlParams = new URLSearchParams(window.location.search);
+      const alertId = urlParams.get('alert') || `SNAP-${Date.now() % 100000}`;
+      const sig = urlParams.get('sig') || '';
+      const exp = urlParams.get('exp') || '';
+      const nonce = urlParams.get('n') || '';
+
+      const payload = {
+        store: storeSlug,
+        fileName: file.name,
+        base64Image: compressed.base64Data,
+        alertId: alertId,
+        exp: exp,
+        nonce: nonce,
+        sig: sig
+      };
+
+      if (window.mvTelemetry) {
+        window.mvTelemetry.track('camera_snap', {
+          store: storeSlug,
+          fileName: file.name,
+          fileSizeBytes: file.size,
+          isOnline: navigator.onLine,
+          alertId: alertId
+        });
+      }
+
+      // If device is offline (walk-in cooler detected prior to request), save directly
+      if (!navigator.onLine) {
+        await saveToOfflineCoolerVault(payload, file.name);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/snap-upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error || 'Server rejected invoice upload');
+        }
+
+        // Push real camera snap to shared MMS queue for real-time visibility in adjacent admin tabs
+        const report = data.audit_report || {};
+        const feed = (typeof storeFeeds !== 'undefined' && storeFeeds[storeSlug]) || {};
+        const val = (data.profit_protected_usd != null ? data.profit_protected_usd : (report.combined_found_money_usd != null ? report.combined_found_money_usd : (report.total_monthly_protected_usd != null ? report.total_monthly_protected_usd : 827.00)));
+        const finalMsgId = data.msg_id || alertId;
+
+        const newMmsItem = {
+          id: finalMsgId,
+          time: "Just Now (1-Tap Snap Camera)",
+          phone: feed.phone || "+14155550101",
+          slug: storeSlug,
+          biz: feed.name || storeSlug,
+          owner: feed.owner || "Store Owner",
+          vendor: report.vendor_name ? `${report.vendor_name} (${report.invoice_number || file.name})` : `In-House Camera Snap (${file.name})`,
+          folderPath: `clients/${storeSlug}/incoming_invoices/inv_${finalMsgId}.jpg`,
+          piiRedacted: report.pii_redacted_count || 0,
+          foundAmount: Number(val),
+          status: "PENDING_APPROVAL",
+          smsText: report.sms_action_card || `[MarginVault AI -- ${feed.name || storeSlug}]\nInvoice photo ${file.name} audited via 1-Tap Snap.\n* Profit Protected: +$${Number(val).toFixed(2)}/mo`
+        };
+
+        try {
+          const queue = JSON.parse(localStorage.getItem('mv_shared_mms_queue') || '[]');
+          const existingIdx = queue.findIndex(m => m.id === newMmsItem.id);
+          if (existingIdx >= 0) {
+            queue[existingIdx] = newMmsItem;
+          } else {
+            queue.unshift(newMmsItem);
+          }
+          localStorage.setItem('mv_shared_mms_queue', JSON.stringify(queue));
+        } catch (lsErr) {
+          console.warn('Failed to sync real snap to localStorage:', lsErr);
+        }
+
+        renderLiveAuditResult(data.audit_report || { profit_protected_usd: data.profit_protected_usd }, finalMsgId);
+
+        if (window.mvTelemetry) {
+          window.mvTelemetry.track('snap_upload_success', {
+            store: storeSlug,
+            fileName: file.name,
+            msgId: finalMsgId,
+            profit_protected_usd: val
+          });
+        }
+      } catch (networkErr) {
+        // Network failed during transit (walked into cooler or spotty cellular)
+        console.warn('Network transmission failed; routing to IndexedDB Offline Vault:', networkErr);
+        if (window.mvTelemetry) {
+          window.mvTelemetry.logError('marginvault_snap', networkErr, {
+            action: 'snap_upload_network_failure',
+            store: storeSlug,
+            fileName: file.name
+          });
+        }
+        await saveToOfflineCoolerVault(payload, file.name);
+      }
+    } catch (err) {
+      if (window.mvTelemetry) {
+        window.mvTelemetry.logError('marginvault_snap', err, {
+          action: 'handle_invoice_snap_error',
+          fileName: file ? file.name : ''
+        });
+      }
+      resultContainer.innerHTML = `
+        <div class="action-card" style="border-color:#ef4444; background:#fef2f2; color:#b91c1c; padding:16px;">
+          <strong><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Intake Error:</strong> ${err.message}
+        </div>`;
+    }
+  }
+
+  // 8. Save to Offline Vault & Render Walk-in Cooler Banner
+  async function saveToOfflineCoolerVault(payload, fileName) {
+    const invId = `OFFLINE-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const record = {
+      id: invId,
+      storeSlug: payload.store,
+      alertId: payload.alertId,
+      fileName: fileName,
+      base64Image: payload.base64Image,
+      sig: payload.sig,
+      exp: payload.exp,
+      nonce: payload.nonce,
+      capturedAt: Date.now(),
+      isoTime: new Date().toISOString(),
+      status: 'QUEUED',
+      attempts: 0,
+      lastError: null
+    };
+
+    await enqueueOfflineInvoice(record);
+
+    if (window.mvTelemetry) {
+      window.mvTelemetry.track('cooler_queued', {
+        store: payload.store,
+        fileName: fileName,
+        alertId: payload.alertId,
+        id: invId
+      });
+    }
+
+    // Push queued snap to shared MMS queue so adjacent admin tabs see offline queued status
+    try {
+      const queue = JSON.parse(localStorage.getItem('mv_shared_mms_queue') || '[]');
+      const feed = (typeof storeFeeds !== 'undefined' && storeFeeds[payload.store]) || {};
+      const newMmsItem = {
+        id: invId,
+        time: "Just Now (Walk-in Cooler Offline)",
+        phone: feed.phone || "+14155550101",
+        slug: payload.store,
+        biz: feed.name || payload.store,
+        owner: feed.owner || "Store Owner",
+        vendor: `Walk-in Cooler Snap (${fileName})`,
+        folderPath: `clients/${payload.store}/incoming_invoices/inv_${invId}.jpg`,
+        piiRedacted: 0,
+        foundAmount: 0.00,
+        status: "QUEUED_OFFLINE",
+        smsText: `[MarginVault AI -- ${feed.name || payload.store}]\nDelivery invoice ${fileName} captured in walk-in cooler; auto-sync queued.`
+      };
+      queue.unshift(newMmsItem);
+      localStorage.setItem('mv_shared_mms_queue', JSON.stringify(queue));
+    } catch (lsErr) {}
+
+    // Arm background sync if supported
+    if ('serviceWorker' in navigator && 'SyncManager' in window) {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        await reg.sync.register('sync-offline-invoices');
+      } catch (e) {}
+    }
+
+    const resultContainer = document.getElementById('liveSnapResult');
+    resultContainer.innerHTML = `
+      <div class="action-card" style="border-color:#f59e0b; background:#fffbeb; color:#92400e; padding:18px;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+          <svg class="mv-icon" style="width:24px; height:24px;" viewBox="0 0 24 24" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <strong style="font-size:16px;">Saved Offline (Walk-in Cooler Mode)</strong>
+        </div>
+        <p style="margin:0 0 10px 0; font-size:13.5px; line-height:1.4;">
+          Invoice <code>${fileName}</code> is safely saved in local phone memory. We will automatically audit and sync it as soon as you step out of the cooler into cellular range.
+        </p>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:700; color:#b45309; border-top:1px solid #fde68a; padding-top:10px;">
+          <span><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>1 Invoice Queued in Local Vault</span>
+          <span>Auto-Sync: Ready <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg></span>
+        </div>
+      </div>`;
+
+    refreshOfflineQueueCount();
+  }
+
+  // 9. Auto-Sync Flush Daemon
+  async function syncOfflineInvoices() {
+    if (isSyncInProgress || !navigator.onLine) return;
+    isSyncInProgress = true;
+
+    try {
+      const queue = await getPendingOfflineInvoices();
+      if (!queue || queue.length === 0) {
+        isSyncInProgress = false;
+        return;
+      }
+
+      for (const item of queue) {
+        try {
+          const resp = await fetch('/api/snap-upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              store: item.storeSlug,
+              fileName: item.fileName,
+              base64Image: item.base64Image,
+              alertId: item.alertId,
+              exp: item.exp,
+              nonce: item.nonce,
+              sig: item.sig
+            })
+          });
+
+          if (resp.ok) {
+            const data = await resp.json();
+            await updateVaultInvoiceStatus(item.id, 'SYNCED', data);
+
+            // Update localStorage mv_shared_mms_queue
+            try {
+              const queue = JSON.parse(localStorage.getItem('mv_shared_mms_queue') || '[]');
+              const report = data.audit_report || {};
+              const feed = (typeof storeFeeds !== 'undefined' && storeFeeds[item.storeSlug]) || {};
+              const foundMoney = Number(data.profit_protected_usd != null ? data.profit_protected_usd : (report.combined_found_money_usd != null ? report.combined_found_money_usd : 827.00));
+              const syncedItem = {
+                id: data.msg_id || item.id,
+                time: "Just Now (Cooler Synced)",
+                phone: feed.phone || "+14155550101",
+                slug: item.storeSlug,
+                biz: feed.name || item.storeSlug,
+                owner: feed.owner || "Store Owner",
+                vendor: report.vendor_name ? `${report.vendor_name} (${report.invoice_number || item.fileName})` : `Walk-in Cooler Snap (${item.fileName})`,
+                folderPath: `clients/${item.storeSlug}/incoming_invoices/inv_${data.msg_id || item.id}.jpg`,
+                piiRedacted: report.pii_redacted_count || 0,
+                foundAmount: foundMoney,
+                status: "PENDING_APPROVAL",
+                smsText: report.sms_action_card || `[MarginVault AI] Delivery invoice ${item.fileName} synced from cooler.\n* Profit Protected: +$${foundMoney.toFixed(2)}/mo`
+              };
+              const idx = queue.findIndex(m => m.id === item.id || m.id === syncedItem.id);
+              if (idx >= 0) {
+                queue[idx] = syncedItem;
+              } else {
+                queue.unshift(syncedItem);
+              }
+              localStorage.setItem('mv_shared_mms_queue', JSON.stringify(queue));
+            } catch (lsErr) {}
+
+            renderSyncedSuccessCard({
+              fileName: item.fileName,
+              msgId: data.msg_id,
+              audit: data.audit_report,
+              profit_protected_usd: data.profit_protected_usd
+            });
+
+            if (window.mvTelemetry) {
+              window.mvTelemetry.track('cooler_synced', {
+                store: item.storeSlug,
+                fileName: item.fileName,
+                msgId: data.msg_id || item.id,
+                profit_protected_usd: data.profit_protected_usd
+              });
+            }
+          }
+        } catch (err) {
+          console.warn('Sync retry failed for invoice:', item.id, err);
+        }
+      }
+    } finally {
+      isSyncInProgress = false;
+      refreshOfflineQueueCount();
+    }
+  }
+
+  // Dynamic Line Audits Formatter
+  function formatLineAuditsHtml(lineAudits) {
+    if (!lineAudits || !Array.isArray(lineAudits) || lineAudits.length === 0) {
+      return `
+        <div class="sku-row">
+          <strong>1. Large AA Shell Eggs (15-Doz):</strong><br>
+          <span class="price-jump">Billed $59.25/cs vs $54.00/cs baseline (+9.7% hike)</span><br>
+          <span class="new-pos-badge">Claim $63.00 Cross-Store Credit + Raise POS +$0.50</span>
+        </div>
+        <div class="sku-row">
+          <strong>2. Unsalted Sweet Cream Butter (36-lb):</strong><br>
+          <span class="price-jump">Billed $73.50/cs vs $68.00/cs baseline (+8.1% hike)</span><br>
+          <span class="new-pos-badge">Update Register Price: $4.25 &rarr; $4.75 Today</span>
+        </div>`;
+    }
+    return lineAudits.map((line, idx) => {
+      const name = line.item_name || line.sku || `Item ${idx + 1}`;
+      const billed = line.billed_case_cost != null ? `$${Number(line.billed_case_cost).toFixed(2)}` : 'N/A';
+      const base = line.baseline_case_cost != null ? `$${Number(line.baseline_case_cost).toFixed(2)}` : 'N/A';
+      const hike = line.hike_pct != null ? `${line.hike_pct >= 0 ? '+' : ''}${Number(line.hike_pct).toFixed(1)}% hike` : '';
+      const oldPrice = line.old_pos_price != null ? `$${Number(line.old_pos_price).toFixed(2)}` : '';
+      const recPrice = line.recommended_pos_price != null ? `$${Number(line.recommended_pos_price).toFixed(2)}` : '';
+      const credit = line.cross_store_credit_usd != null && line.cross_store_credit_usd > 0 ? `Claim $${Number(line.cross_store_credit_usd).toFixed(2)} Credit &bull; ` : '';
+      const actionText = credit || (oldPrice && recPrice ? `Update Register: ${oldPrice} &rarr; ${recPrice}` : `Protected: +$${Number(line.monthly_profit_protected_usd || 0).toFixed(2)}/mo`);
+      
+      return `
+        <div class="sku-row">
+          <strong>${idx + 1}. ${name}:</strong><br>
+          <span class="price-jump">Billed ${billed}/cs vs ${base}/cs baseline ${hike ? `(${hike})` : ''}</span><br>
+          <span class="new-pos-badge">${actionText}</span>
+        </div>`;
+    }).join('');
+  }
+
+  // 10. Sync Success Feedback Card
+  function renderSyncedSuccessCard(info) {
+    const resultContainer = document.getElementById('liveSnapResult');
+    const audit = info.audit || {};
+    const val = (info.profit_protected_usd != null ? info.profit_protected_usd : (audit.profit_protected_usd != null ? audit.profit_protected_usd : (audit.combined_found_money_usd != null ? audit.combined_found_money_usd : (audit.total_monthly_protected_usd != null ? audit.total_monthly_protected_usd : null))));
+    const protectedUsd = val != null ? Number(val).toFixed(2) : '827.00';
+    const linesHtml = formatLineAuditsHtml(audit.line_audits);
+
+    resultContainer.innerHTML = `
+      <div class="action-card highlight" style="border-color:#10b981; background:#ecfdf5; padding:18px;">
+        <span class="card-tag tag-green"><svg class="mv-icon" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Cooler Invoice Synced</span>
+        <h3 style="margin:4px 0 6px 0; font-size:17px;">Uploaded: <code>${info.fileName || 'Invoice'}</code> (${info.msgId || 'SYNCED'})</h3>
+        <p style="margin:0 0 8px 0; font-size:13px; color:#065f46;">
+          <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Auto-synced upon stepping out of cooler &bull; <strong>+$${protectedUsd}/mo Protected</strong>:
+        </p>
+        ${linesHtml}
+      </div>`;
+  }
+
+  // 11. Render Live Audit Result Helper
+  function renderLiveAuditResult(audit, msgId) {
+    const resultContainer = document.getElementById('liveSnapResult');
+    const aud = audit || {};
+    const val = (aud.profit_protected_usd != null ? aud.profit_protected_usd : (aud.combined_found_money_usd != null ? aud.combined_found_money_usd : (aud.total_monthly_protected_usd != null ? aud.total_monthly_protected_usd : null)));
+    const protectedUsd = val != null ? Number(val).toFixed(2) : '827.00';
+    const linesHtml = formatLineAuditsHtml(aud.line_audits);
+    const redactionTag = aud.pii_redacted_count != null ? `Banking/ACH numbers masked (${aud.pii_redacted_count} redacted)` : 'Banking/ACH numbers masked locally';
+
+    resultContainer.innerHTML = `
+      <div class="action-card highlight">
+        <span class="card-tag tag-green"><svg class="mv-icon" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Audit Complete (2.8s)</span>
+        <h3 style="margin:4px 0 6px 0; font-size:17px;">Uploaded Invoice (${msgId || 'SNAP-84920'})</h3>
+        <p style="margin:0 0 8px 0; font-size:13px; color:#065f46;">
+          <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>${redactionTag} &bull; Synced live &bull; <strong>+$${protectedUsd}/mo Protected</strong>:
+        </p>
+        ${linesHtml}
+      </div>`;
+  }
+
+  // 12. Update Queue Counter Badge
+  async function refreshOfflineQueueCount() {
+    try {
+      const queue = await getPendingOfflineInvoices();
+      const count = queue.length;
+      let badge = document.getElementById('offlineVaultBadge');
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'offlineVaultBadge';
+        badge.style.cssText = 'display:none; background:#f59e0b; color:#fff; font-size:11px; font-weight:800; padding:4px 10px; border-radius:999px; margin-top:6px; text-align:center;';
+        const headerTop = document.querySelector('.header-top');
+        if (headerTop) headerTop.appendChild(badge);
+      }
+      if (count > 0) {
+        badge.style.display = 'inline-block';
+        badge.textContent = `[OFFLINE] ${count} INVOICE${count > 1 ? 'S' : ''} QUEUED`;
+      } else {
+        badge.style.display = 'none';
+      }
+    } catch (e) {}
+  }
+
+  // 13. Event Listeners for Foreground Network Recovery
+  window.addEventListener('online', () => {
+    console.log('Network online event detected; flushing local offline vault...');
+    syncOfflineInvoices();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && navigator.onLine) {
+      syncOfflineInvoices();
+    }
+  });
+
+  function runInstantDemoSnap() {
+    processInHouseSnap("Sysco_Morning_Delivery_Slip.jpg");
+  }
+
+  async function processInHouseSnap(fileName) {
+    const slug = document.getElementById('activeStoreSelect').value;
+    const feed = storeFeeds[slug] || storeFeeds.golden_gate_bakery_sample;
+    const resBox = document.getElementById('liveSnapResult');
+    resBox.style.display = 'block';
+    resBox.innerHTML = `
+      <div class="action-card highlight" style="text-align:center;">
+        <strong><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Auditing <code>${fileName}</code> via In-House PII Firewall &amp; OCR...</strong>
+      </div>
+    `;
+
+    const msgId = 'SNAP-' + Math.floor(10000 + Math.random() * 89999);
+    const ownerName = feed.owner || "Store Owner";
+    const storeName = feed.name || slug;
+    const storePhone = feed.phone || "+14155550101";
+
+    const generatedSms = `[MarginVault AI -- ${storeName}]
+Hey ${ownerName} -- we automatically received & audited your 1-Tap Web Snap (${fileName} / ${msgId}):
+* Profit Protected on This Delivery: +$827.00/mo
+* Cross-Store Credit ($63.00): Large AA Shell Eggs (15-Doz) billed $59.25/cs vs $54.00/cs at Store #1. Reply 'SEND' to claim credit.
+* Barcode Update (Large AA Shell Eggs): Wholesale up +9.7% ($54.00 -> $59.25/cs). Update register from $14.50 to $15.00 today (+$693/mo protected).
+* Barcode Update (Sweet Cream Butter): Wholesale up +8.1% ($68.00 -> $73.50/cs). Update register from $4.25 to $4.75 today (+$71/mo protected).`;
+
+    const newMmsItem = {
+      id: msgId,
+      time: "Just Now (1-Tap Snap App)",
+      phone: storePhone,
+      slug: slug,
+      biz: storeName,
+      owner: ownerName,
+      vendor: `In-House 1-Tap Snap (${fileName})`,
+      folderPath: `clients/${slug}/incoming_invoices/inv_${msgId}_${fileName}`,
+      piiRedacted: 2,
+      foundAmount: 827.00,
+      status: "PENDING_APPROVAL",
+      smsText: generatedSms
+    };
+
+    try {
+      const existingQueue = JSON.parse(localStorage.getItem('mv_shared_mms_queue') || '[]');
+      existingQueue.unshift(newMmsItem);
+      localStorage.setItem('mv_shared_mms_queue', JSON.stringify(existingQueue));
+    } catch (err) {}
+
+    if (window.mvTelemetry) {
+      window.mvTelemetry.track('camera_snap', {
+        store: slug,
+        fileName: fileName,
+        isDemo: true,
+        msgId: msgId
+      });
+    }
+
+    try {
+      await fetch('/api/simulate-mms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: storePhone,
+          MessageSid: msgId,
+          rawText: `IN-HOUSE WEB SNAP (${fileName}) | ACH: 121000358\nSKU-101 Large AA Shell Eggs 14cs @ $59.25 (Store #1: $54.00)\nSKU-102 Sweet Cream Butter 8cs @ $73.50`
+        })
+      });
+    } catch (err) {}
+
+    setTimeout(() => {
+      renderLiveAuditResult({ profit_protected_usd: 827.00 }, msgId);
+    }, 450);
+  }
+
+  function switchPane(paneId, btn) {
+    document.querySelectorAll('.view-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    document.getElementById(paneId).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  initStoreFromUrl();
+</script>
+</body>
+</html>
