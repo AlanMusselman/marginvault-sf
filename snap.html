@@ -529,7 +529,7 @@
     max-width: 480px;
     background: var(--navy);
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     border-top: 2px solid #334155;
     z-index: 90;
   }
@@ -537,8 +537,8 @@
     background: none;
     border: none;
     color: #94a3b8;
-    padding: 10px 6px;
-    font-size: 11.5px;
+    padding: 10px 4px;
+    font-size: 11px;
     font-weight: 700;
     cursor: pointer;
     text-align: center;
@@ -551,6 +551,71 @@
 
   .view-pane { display: none; }
   .view-pane.active { display: block; }
+
+  /* Account & Invoice Vault Styles */
+  .account-field-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--slate);
+    margin: 10px 0 4px 0;
+  }
+  .account-input {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--navy);
+    background: #f8fafc;
+  }
+  .account-input:focus {
+    outline: none;
+    border-color: var(--emerald);
+    background: #ffffff;
+  }
+  .inv-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .inv-kpi-box {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 10px 8px;
+    text-align: center;
+  }
+  .inv-kpi-val {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--emerald);
+  }
+  .inv-kpi-lbl {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--slate);
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .audit-drawer {
+    display: none;
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 8px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    border-left: 3px solid #10b981;
+  }
+  .audit-drawer.open {
+    display: block;
+  }
 </style>
 </head>
 <body>
@@ -560,7 +625,9 @@
   <header class="app-header">
     <div class="header-top">
       <div class="app-logo">Margin<span>Vault</span> Instant Snap</div>
-      <span class="zero-login-pill">100% In-House &bull; No Login</span>
+      <button type="button" class="zero-login-pill" style="cursor:pointer;" onclick="switchPaneById('pane-score')">
+        <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>My Account
+      </button>
     </div>
     <div class="store-selector-bar">
       <select id="activeStoreSelect" onchange="switchStore()">
@@ -606,12 +673,54 @@
       <!-- INSTANT LIVE RESULT BOX (Appears Immediately After Snapping) -->
       <div id="liveSnapResult" style="display:none;"></div>
 
+      <!-- QUICK BAR TO UPLOADED INVOICES HISTORY -->
+      <div class="action-card" style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:#f8fafc; border-color:#cbd5e1;">
+        <div>
+          <strong style="font-size:13.5px; color:var(--navy); display:block;">Uploaded Invoices Vault</strong>
+          <span id="quickInvoiceSummaryText" style="font-size:12px; color:var(--slate);">View all uploaded invoices &amp; line-item audits</span>
+        </div>
+        <button type="button" onclick="switchPaneById('pane-invoices')" style="background:var(--navy); color:#fff; border:none; border-radius:8px; padding:8px 12px; font-size:12.5px; font-weight:700; cursor:pointer; white-space:nowrap;">
+          <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>View All Invoices
+        </button>
+      </div>
+
       <!-- RECENT STORE ACTION CARDS -->
       <div class="section-label">This Week's Store Action Cards</div>
       <div id="storeFeedContainer"></div>
     </div>
 
-    <!-- VIEW 2: 8 PM WEATHER BAKE & PREP SHEET -->
+    <!-- VIEW 2: MY UPLOADED INVOICES HISTORY VAULT -->
+    <div id="pane-invoices" class="view-pane">
+      <div class="action-card highlight" style="margin-bottom:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span class="card-tag tag-green" style="margin:0;">Store Invoice History Vault</span>
+          <button type="button" onclick="switchPaneById('pane-snap')" style="background:var(--emerald); color:#fff; border:none; border-radius:7px; padding:6px 10px; font-size:12px; font-weight:700; cursor:pointer;">
+            <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>Snap New Invoice
+          </button>
+        </div>
+        <h3 id="invVaultStoreTitle" style="margin:2px 0 6px 0; font-size:17.5px;">Uploaded Delivery Invoices</h3>
+        <p style="margin:0 0 12px 0; font-size:13px; color:#334155;">Every delivery slip snapped via phone camera or MMS is audited and stored in your private store vault:</p>
+        <div class="inv-kpi-grid">
+          <div class="inv-kpi-box">
+            <div id="invCountStat" class="inv-kpi-val">2</div>
+            <div class="inv-kpi-lbl">Invoices Uploaded</div>
+          </div>
+          <div class="inv-kpi-box">
+            <div id="invProtectedStat" class="inv-kpi-val">+$1,654</div>
+            <div class="inv-kpi-lbl">Profit Protected</div>
+          </div>
+          <div class="inv-kpi-box">
+            <div id="invCoolerStat" class="inv-kpi-val" style="color:var(--navy);">0 Queued</div>
+            <div class="inv-kpi-lbl">Cooler Offline</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">Uploaded Invoices &amp; Line-Item Audits</div>
+      <div id="uploadedInvoicesContainer"></div>
+    </div>
+
+    <!-- VIEW 3: 8 PM WEATHER BAKE & PREP SHEET -->
     <div id="pane-bake" class="view-pane">
       <div class="action-card highlight">
         <span class="card-tag tag-green">Tomorrow's 4:00 AM Weather Prep Sheet</span>
@@ -632,14 +741,79 @@
       </div>
     </div>
 
-    <!-- VIEW 3: MONTHLY FOUND-MONEY SCORECARD -->
+    <!-- VIEW 4: MY STORE ACCOUNT & MONTHLY FOUND-MONEY SCORECARD -->
     <div id="pane-score" class="view-pane">
+      <!-- STORE LOOKUP BY PHONE OR NAME -->
+      <div class="action-card" style="background:#f8fafc;">
+        <span class="card-tag tag-green">Quick Store Lookup</span>
+        <h3 style="margin:4px 0 4px 0; font-size:16.5px;">Access Your Store Account</h3>
+        <p style="margin:0 0 8px 0; font-size:12.5px; color:var(--slate);">Enter your registered mobile phone number or store name to load your store profile and uploaded invoices:</p>
+        <div style="display:flex; gap:8px;">
+          <input id="accountLookupInput" type="text" class="account-input" placeholder="e.g., (415) 555-0101 or Golden Gate" style="flex:1; background:#fff;">
+          <button type="button" onclick="findStoreAccount()" style="background:var(--navy); color:#fff; border:none; border-radius:8px; padding:9px 12px; font-size:12.5px; font-weight:700; cursor:pointer; white-space:nowrap;">
+            <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Find Store Account
+          </button>
+        </div>
+        <div id="accountLookupMsg" style="display:none; margin-top:8px; font-size:12.5px; font-weight:700; padding:8px 10px; border-radius:6px;"></div>
+      </div>
+
+      <!-- MY STORE ACCOUNT PROFILE & SETTINGS -->
+      <div class="action-card highlight" id="storeAccountCard">
+        <span class="card-tag tag-green">Active Founding Charter Profile</span>
+        <h3 style="margin:4px 0 4px 0; font-size:17.5px;">My Store Account Info</h3>
+        <p style="margin:0 0 10px 0; font-size:12.5px; color:#334155;">Update your store contact details, alert number, or POS connection below:</p>
+
+        <label class="account-field-label" for="accBizInput">Store / Business Name</label>
+        <input id="accBizInput" type="text" class="account-input" value="Golden Gate Bakery Group">
+
+        <label class="account-field-label" for="accOwnerInput">Owner / General Manager Name</label>
+        <input id="accOwnerInput" type="text" class="account-input" value="Carlos &amp; Elena">
+
+        <label class="account-field-label" for="accPhoneInput">Mobile Phone for Weekly SMS Alerts</label>
+        <input id="accPhoneInput" type="tel" class="account-input" value="+14155550101">
+
+        <label class="account-field-label" for="accPosSelect">Connected POS &amp; Register System</label>
+        <select id="accPosSelect" class="account-input">
+          <option value="Toast POS + DoorDash/UberEats">Toast POS + DoorDash / UberEats</option>
+          <option value="Square POS + DoorDash/UberEats">Square POS + DoorDash / UberEats</option>
+          <option value="Liquor/Grocery Barcode Scanner (NRG/Verifone/Clover)">Corner / Liquor Store Barcode Scanner (NRG / Verifone / Clover)</option>
+          <option value="Clover POS">Clover POS</option>
+          <option value="Other POS">Other Register / POS System</option>
+        </select>
+
+        <label class="account-field-label" for="accTierSelect">Active Subscription &amp; Charter Tier</label>
+        <select id="accTierSelect" class="account-input" style="color:#065f46; font-weight:700;">
+          <option value="Tier 1: 1-Year Free Early Adopter (Invoice & Barcode Watchdog - Reg $199/mo)">Tier 1: 1-Year Free Charter ($0 Year 1 &bull; Reg $199/mo)</option>
+          <option value="Tier 2: 1-Year Free Early Adopter (Full Store Profit & Delivery Vault - Reg $399/mo)">Tier 2: 1-Year Free Charter ($0 Year 1 &bull; Reg $399/mo)</option>
+          <option value="Tier 3: 1-Year Free Early Adopter (Multi-Store Group Vault - Reg $699/mo)">Tier 3: 1-Year Free Charter ($0 Year 1 &bull; Reg $699/mo)</option>
+        </select>
+
+        <div style="margin-top:12px; padding:10px; background:#ffffff; border:1px dashed #10b981; border-radius:8px; font-size:12px;">
+          <strong style="color:var(--navy); display:block; margin-bottom:4px;">Your Direct 1-Tap Store Link (Bookmark on Phone):</strong>
+          <code id="accMagicLinkText" style="word-break:break-all; color:#047857; font-weight:700;">https://marginvaultai.com/snap.html?store=golden_gate_bakery_sample</code>
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <button type="button" onclick="copyStoreMagicLink()" style="flex:1; background:#ecfdf5; color:#065f46; border:1px solid #10b981; border-radius:6px; padding:7px 10px; font-size:12px; font-weight:700; cursor:pointer;">
+              <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy Store Link
+            </button>
+            <button type="button" onclick="switchPaneById('pane-invoices')" style="flex:1; background:var(--navy); color:#fff; border:none; border-radius:6px; padding:7px 10px; font-size:12px; font-weight:700; cursor:pointer;">
+              <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>View Uploaded Invoices
+            </button>
+          </div>
+        </div>
+
+        <button type="button" class="quick-btn" style="background:var(--emerald); margin-top:12px;" onclick="saveStoreAccountInfo()">
+          <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save Account Info
+        </button>
+        <div id="accSaveBanner" style="display:none; margin-top:8px; padding:8px 10px; background:#d1fae5; color:#065f46; border-radius:6px; font-size:12.5px; font-weight:700; text-align:center;"></div>
+      </div>
+
+      <!-- MONTHLY FOUND-MONEY SCORECARD -->
       <div class="action-card">
         <span class="card-tag tag-blue">Live 30-Day ROI Tracker</span>
         <h3 style="margin:4px 0 4px 0; font-size:18px;">Protected &amp; Found This Month</h3>
-        <div style="font-size:32px; font-weight:800; color:var(--emerald); margin:6px 0;">+$4,892.40</div>
-        <p style="margin:0 0 12px 0; font-size:13px; color:var(--slate);">Backed by your 3x Minimum ROI Guarantee.</p>
-        <div class="sku-row"><strong>Wholesale Price Hikes Caught:</strong> <span style="float:right; color:var(--emerald); font-weight:800;">+$2,140.00</span></div>
+        <div id="scorecardTotalUsd" style="font-size:32px; font-weight:800; color:var(--emerald); margin:6px 0;">+$4,892.40</div>
+        <p style="margin:0 0 12px 0; font-size:13px; color:var(--slate);">Backed by your 3x Minimum ROI Guarantee ($0/mo Year 1 Early Adopter Charter).</p>
+        <div class="sku-row"><strong>Wholesale Price Hikes Caught:</strong> <span id="scorecardHikesUsd" style="float:right; color:var(--emerald); font-weight:800;">+$2,140.00</span></div>
         <div class="sku-row"><strong>Cross-Store &amp; Post-Off Credits:</strong> <span style="float:right; color:var(--emerald); font-weight:800;">+$1,120.00</span></div>
         <div class="sku-row"><strong>DoorDash Chargebacks Won:</strong> <span style="float:right; color:var(--emerald); font-weight:800;">+$842.40</span></div>
         <div class="sku-row"><strong>8 PM Bake-Sheet Waste Saved:</strong> <span style="float:right; color:var(--emerald); font-weight:800;">+$790.00</span></div>
@@ -648,16 +822,19 @@
     </div>
   </div>
 
-  <!-- BOTTOM APP BAR -->
+  <!-- BOTTOM APP BAR (4 TABS: SNAP, MY INVOICES, BAKE PREP, MY ACCOUNT) -->
   <nav class="bottom-nav">
-    <button class="nav-item active" onclick="switchPane('pane-snap', this)">
+    <button class="nav-item active" id="navBtnSnap" onclick="switchPane('pane-snap', this)">
       <span class="nav-icon"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></span>Snap Invoice
     </button>
-    <button class="nav-item" onclick="switchPane('pane-bake', this)">
+    <button class="nav-item" id="navBtnInvoices" onclick="switchPane('pane-invoices', this)">
+      <span class="nav-icon"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>My Invoices
+    </button>
+    <button class="nav-item" id="navBtnBake" onclick="switchPane('pane-bake', this)">
       <span class="nav-icon"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>Bake Prep Sheet
     </button>
-    <button class="nav-item" onclick="switchPane('pane-score', this)">
-      <span class="nav-icon"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>Found Money Scorecard
+    <button class="nav-item" id="navBtnAccount" onclick="switchPane('pane-score', this)">
+      <span class="nav-icon"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>My Account
     </button>
   </nav>
 </div>
@@ -718,6 +895,74 @@
     }
   };
 
+  const defaultStoreInvoices = {
+    golden_gate_bakery_sample: [
+      {
+        id: "MMS-99201",
+        time: "Today, 6:14 AM (1-Tap Snap)",
+        phone: "+14155550101",
+        slug: "golden_gate_bakery_sample",
+        biz: "Golden Gate Bakery Group (Sample - 3 Stores)",
+        owner: "Carlos & Elena",
+        vendor: "Sysco SF Delivery Invoice #4410",
+        folderPath: "clients/golden_gate_bakery_sample/incoming_invoices/inv_MMS-99201.jpg",
+        piiRedacted: 2,
+        foundAmount: 827.00,
+        status: "AUDITED_LIVE",
+        smsText: "[MarginVault AI -- Golden Gate Bakery Group]\nInvoice #4410 (Sysco SF) audited in 2.8s:\n* Profit Protected on This Delivery: +$827.00/mo\n* 1) Large AA Shell Eggs (15-Doz): Billed $59.25/cs vs $54.00/cs at Store #1 (+9.7% hike). Claim $63.00 Cross-Store Credit + Update POS Breakfast Plate +$0.50 (+$693/mo).\n* 2) Sweet Cream Butter (36-lb): Billed $73.50/cs vs $68.00/cs baseline (+8.1% hike). Update Pastry Box $14.50 -> $15.25 (+$71/mo)."
+      },
+      {
+        id: "SNAP-88412",
+        time: "Tue, 5:48 AM (1-Tap Snap)",
+        phone: "+14155550101",
+        slug: "golden_gate_bakery_sample",
+        biz: "Golden Gate Bakery Group (Sample - 3 Stores)",
+        owner: "Carlos & Elena",
+        vendor: "BakeMark Flour & Pastry Delivery #1904",
+        folderPath: "clients/golden_gate_bakery_sample/incoming_invoices/inv_SNAP-88412.jpg",
+        piiRedacted: 1,
+        foundAmount: 540.00,
+        status: "SENT_TO_OWNER",
+        smsText: "[MarginVault AI -- Golden Gate Bakery Group]\nInvoice #1904 (BakeMark) audited:\n* Profit Protected on This Delivery: +$540.00/mo\n* High-Gluten Artisan Flour (50-lb): Wholesale up +7.4% ($24.30 -> $26.10/bag). Update Concha & Croissant Tray pricing +$0.25 (+$540/mo protected)."
+      }
+    ],
+    bayview_corner_spirits_sample: [
+      {
+        id: "MMS-99202",
+        time: "Today, 9:22 AM (1-Tap Snap)",
+        phone: "+14155550199",
+        slug: "bayview_corner_spirits_sample",
+        biz: "Bayview Corner Spirits (Sample)",
+        owner: "Marco",
+        vendor: "Southern Glazer's Spirits Invoice #7712",
+        folderPath: "clients/bayview_corner_spirits_sample/incoming_invoices/inv_MMS-99202.jpg",
+        piiRedacted: 1,
+        foundAmount: 374.00,
+        status: "AUDITED_LIVE",
+        smsText: "[MarginVault AI -- Bayview Corner Spirits]\nInvoice #7712 (Southern Glazer's) audited:\n* Profit Protected on This Delivery: +$374.00/mo\n* 1) Reserve Reposado Tequila 750mL: Wholesale up +10.5% (+$24/cs). Update register barcode $54.99 -> $63.99 today (+$190/mo).\n* 2) 5-Case Post-Off Rebate (-$105): Bump Friday Artisan Vodka 750mL order from 3 to 5 cases to claim -$21/case discount."
+      }
+    ],
+    mission_taqueria_deli_sample: [
+      {
+        id: "SNAP-77310",
+        time: "Yesterday, 7:05 AM (1-Tap Snap)",
+        phone: "+14155550177",
+        slug: "mission_taqueria_deli_sample",
+        biz: "Mission Panadería & Deli (Sample)",
+        owner: "Mateo",
+        phone: "+14155550177",
+        vendor: "US Foods & DoorDash Reconciliation #9041",
+        folderPath: "clients/mission_taqueria_deli_sample/incoming_invoices/inv_SNAP-77310.jpg",
+        piiRedacted: 2,
+        foundAmount: 495.40,
+        status: "AUDITED_LIVE",
+        smsText: "[MarginVault AI -- Mission Panadería & Deli]\nDelivery & App Audit #9041 complete:\n* Profit Protected: +$495.40/mo\n* 1) DoorDash Chargebacks Won: 4 unfair 'missing item' deductions matched against Toast kitchen tickets (+$105.40 credited Friday).\n* 2) Hass Avocados (48-ct Case): Wholesale up +11.2%. Update Super Burrito Guacamole add-on +$0.50 (+$390/mo)."
+      }
+    ]
+  };
+
+  let cloudMmsQueueCache = [];
+
   function ensureStoreFeedEntry(clientObj) {
     if (!clientObj) return null;
     const slug = (clientObj.slug || clientObj.biz || 'custom_store')
@@ -726,12 +971,14 @@
       .replace(/^_|_$/g, '');
     if (!slug) return null;
 
+    const displayBiz = clientObj.biz || clientObj.name || slug.replace(/_/g, ' ');
     if (!storeFeeds[slug]) {
-      const displayBiz = clientObj.biz || clientObj.name || slug.replace(/_/g, ' ');
       storeFeeds[slug] = {
         name: displayBiz,
         owner: clientObj.owner || "Store Owner",
         phone: clientObj.phone || "+14155550142",
+        pos_type: clientObj.pos_type || clientObj.pos || "Toast POS + DoorDash/UberEats",
+        tier: clientObj.tier || "Tier 2: 1-Year Free Early Adopter (Full Store Profit & Delivery Vault - Reg $399/mo)",
         cards: [
           {
             tag: "Active Founding Store Vault",
@@ -745,14 +992,25 @@
           }
         ]
       };
+    } else {
+      if (clientObj.biz || clientObj.name) storeFeeds[slug].name = displayBiz;
+      if (clientObj.owner) storeFeeds[slug].owner = clientObj.owner;
+      if (clientObj.phone) storeFeeds[slug].phone = clientObj.phone;
+      if (clientObj.pos_type || clientObj.pos) storeFeeds[slug].pos_type = clientObj.pos_type || clientObj.pos;
+      if (clientObj.tier) storeFeeds[slug].tier = clientObj.tier;
     }
 
     const select = document.getElementById('activeStoreSelect');
-    if (select && !Array.from(select.options).some(opt => opt.value === slug)) {
-      const opt = document.createElement('option');
-      opt.value = slug;
-      opt.textContent = `Store: ${storeFeeds[slug].name}`;
-      select.insertBefore(opt, select.firstChild);
+    if (select) {
+      const existingOpt = Array.from(select.options).find(opt => opt.value === slug);
+      if (!existingOpt) {
+        const opt = document.createElement('option');
+        opt.value = slug;
+        opt.textContent = `Store: ${storeFeeds[slug].name}`;
+        select.insertBefore(opt, select.firstChild);
+      } else {
+        existingOpt.textContent = `Store: ${storeFeeds[slug].name}`;
+      }
     }
     return slug;
   }
@@ -776,7 +1034,7 @@
   async function initStoreFromUrl() {
     loadSharedClientsFromLocalStorage();
 
-    // Also pull any stores from cloud_app.py if running online
+    // Also pull any stores & uploaded invoices from cloud_app.py if running online
     try {
       const resp = await fetch('/api/state');
       if (resp.ok) {
@@ -786,11 +1044,15 @@
             ensureStoreFeedEntry(data.clients[i]);
           }
         }
+        if (Array.isArray(data.mmsQueue)) {
+          cloudMmsQueueCache = data.mmsQueue;
+        }
       }
     } catch (e) {}
 
     const params = new URLSearchParams(window.location.search);
     const qStore = params.get('store');
+    const qPane = params.get('pane');
     const select = document.getElementById('activeStoreSelect');
     if (qStore) {
       if (!storeFeeds[qStore]) {
@@ -803,13 +1065,26 @@
       const saved = localStorage.getItem('mv_active_store');
       if (saved && storeFeeds[saved]) select.value = saved;
     }
+
     renderStoreFeed();
+    renderAccountInfo();
+    await renderUploadedInvoices();
+
+    if (qPane === 'invoices' || qPane === 'pane-invoices') {
+      switchPaneById('pane-invoices');
+    } else if (qPane === 'account' || qPane === 'score' || qPane === 'pane-score') {
+      switchPaneById('pane-score');
+    } else if (qPane === 'bake' || qPane === 'pane-bake') {
+      switchPaneById('pane-bake');
+    }
   }
 
   window.addEventListener('storage', (e) => {
-    if (e.key === 'mv_shared_clients') {
+    if (e.key === 'mv_shared_clients' || e.key === 'mv_shared_mms_queue') {
       loadSharedClientsFromLocalStorage();
       renderStoreFeed();
+      renderAccountInfo();
+      renderUploadedInvoices();
     }
   });
 
@@ -818,6 +1093,8 @@
     localStorage.setItem('mv_active_store', val);
     document.getElementById('liveSnapResult').style.display = 'none';
     renderStoreFeed();
+    renderAccountInfo();
+    renderUploadedInvoices();
   }
 
   function renderStoreFeed() {
@@ -1360,6 +1637,7 @@
         </p>
         ${linesHtml}
       </div>`;
+    renderUploadedInvoices();
   }
 
   // 12. Update Queue Counter Badge
@@ -1381,6 +1659,7 @@
       } else {
         badge.style.display = 'none';
       }
+      renderUploadedInvoices();
     } catch (e) {}
   }
 
@@ -1467,14 +1746,368 @@ Hey ${ownerName} -- we automatically received & audited your 1-Tap Web Snap (${f
 
     setTimeout(() => {
       renderLiveAuditResult({ profit_protected_usd: 827.00 }, msgId);
+      renderUploadedInvoices();
     }, 450);
+  }
+
+  // --- 14. CUSTOMER UPLOADED INVOICES VAULT & ACCOUNT MANAGEMENT ---
+  function getInvoicesForActiveStore(slug) {
+    const feed = storeFeeds[slug] || storeFeeds.golden_gate_bakery_sample;
+    const storePhoneClean = String(feed.phone || '').replace(/\D/g, '');
+    const storeNameLower = String(feed.name || '').toLowerCase();
+
+    let combined = [];
+    const seenIds = new Set();
+
+    function matchesActiveStore(item) {
+      if (!item) return false;
+      if (item.slug && item.slug === slug) return true;
+      if (item.storeSlug && item.storeSlug === slug) return true;
+      if (item.folderPath && item.folderPath.indexOf(slug) !== -1) return true;
+      if (storePhoneClean && String(item.phone || '').replace(/\D/g, '') === storePhoneClean) return true;
+      if (storeNameLower && String(item.biz || '').toLowerCase() === storeNameLower) return true;
+      return false;
+    }
+
+    // 1. Pull from localStorage shared MMS queue (most recent first)
+    try {
+      const localQueue = JSON.parse(localStorage.getItem('mv_shared_mms_queue') || '[]');
+      if (Array.isArray(localQueue)) {
+        for (const item of localQueue) {
+          if (matchesActiveStore(item) && item.id && !seenIds.has(item.id)) {
+            seenIds.add(item.id);
+            combined.push(item);
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 2. Pull from backend /api/state cache if available
+    if (Array.isArray(cloudMmsQueueCache)) {
+      for (const item of cloudMmsQueueCache) {
+        if (matchesActiveStore(item) && item.id && !seenIds.has(item.id)) {
+          seenIds.add(item.id);
+          combined.push(item);
+        }
+      }
+    }
+
+    // 3. Seeded default store invoices
+    const defaults = defaultStoreInvoices[slug] || [
+      {
+        id: "SNAP-10492",
+        time: "Baseline Vault Ready",
+        phone: feed.phone || "+14155550142",
+        slug: slug,
+        biz: feed.name || slug,
+        owner: feed.owner || "Store Owner",
+        vendor: "Initial Store Baseline & Price-Match Setup",
+        folderPath: `clients/${slug}/incoming_invoices/baseline_setup.jpg`,
+        piiRedacted: 2,
+        foundAmount: 827.00,
+        status: "AUDITED_LIVE",
+        smsText: `[MarginVault AI -- ${feed.name || slug}]\nStore vault active & monitoring wholesale case costs across Sysco, BakeMark, Southern Glazer's, and Reyes.\n* Snap any paper invoice on the counter to add it to this history feed.`
+      }
+    ];
+    for (const d of defaults) {
+      if (d.id && !seenIds.has(d.id)) {
+        seenIds.add(d.id);
+        combined.push(d);
+      }
+    }
+
+    return combined;
+  }
+
+  async function renderUploadedInvoices() {
+    const slug = document.getElementById('activeStoreSelect').value;
+    const feed = storeFeeds[slug] || storeFeeds.golden_gate_bakery_sample;
+    const invoices = getInvoicesForActiveStore(slug);
+
+    let offlineList = [];
+    try {
+      const allOffline = await getPendingOfflineInvoices();
+      offlineList = allOffline.filter(rec => !rec.storeSlug || rec.storeSlug === slug);
+    } catch (e) {}
+
+    const totalInvoices = invoices.length;
+    const totalProtected = invoices.reduce((sum, it) => sum + (Number(it.foundAmount) || 0), 0);
+
+    const titleEl = document.getElementById('invVaultStoreTitle');
+    if (titleEl) titleEl.textContent = `${feed.name} — Uploaded Invoices`;
+
+    const countEl = document.getElementById('invCountStat');
+    if (countEl) countEl.textContent = String(totalInvoices);
+
+    const protEl = document.getElementById('invProtectedStat');
+    if (protEl) protEl.textContent = `+$${Math.round(totalProtected).toLocaleString()}`;
+
+    const coolerEl = document.getElementById('invCoolerStat');
+    if (coolerEl) {
+      coolerEl.textContent = `${offlineList.length} Queued`;
+      coolerEl.style.color = offlineList.length > 0 ? '#d97706' : 'var(--navy)';
+    }
+
+    const quickText = document.getElementById('quickInvoiceSummaryText');
+    if (quickText) {
+      quickText.textContent = `${totalInvoices} invoice${totalInvoices === 1 ? '' : 's'} uploaded (+$${Math.round(totalProtected).toLocaleString()}/mo protected)`;
+    }
+
+    // Update Scorecard totals dynamically
+    const scoreTotalEl = document.getElementById('scorecardTotalUsd');
+    const scoreHikesEl = document.getElementById('scorecardHikesUsd');
+    if (scoreTotalEl && scoreHikesEl) {
+      const extraFromSnaps = Math.max(0, totalProtected - 1367);
+      const hikesTotal = 2140.00 + extraFromSnaps;
+      const grandTotal = 4892.40 + extraFromSnaps;
+      scoreHikesEl.textContent = `+$${hikesTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      scoreTotalEl.textContent = `+$${grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    const container = document.getElementById('uploadedInvoicesContainer');
+    if (!container) return;
+
+    if (invoices.length === 0) {
+      container.innerHTML = `
+        <div class="action-card" style="text-align:center; padding:22px;">
+          <strong style="display:block; margin-bottom:6px;">No Invoices Uploaded Yet</strong>
+          <p style="margin:0 0 12px 0; font-size:13px; color:var(--slate);">Tap the button below to snap your first wholesale delivery invoice.</p>
+          <button type="button" class="quick-btn" onclick="switchPaneById('pane-snap')">Snap First Invoice</button>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = invoices.map((inv, idx) => {
+      const st = String(inv.status || 'AUDITED_LIVE').toUpperCase();
+      let badgeClass = 'tag-green';
+      let badgeLabel = 'Audited & Live';
+      if (st.indexOf('OFFLINE') !== -1 || st.indexOf('QUEUE') !== -1) {
+        badgeClass = 'tag-amber';
+        badgeLabel = 'Queued in Cooler';
+      } else if (st.indexOf('PENDING') !== -1) {
+        badgeClass = 'tag-blue';
+        badgeLabel = 'Audited & Ready';
+      } else if (st.indexOf('SENT') !== -1) {
+        badgeClass = 'tag-green';
+        badgeLabel = 'SMS Alert Sent';
+      }
+
+      const amt = Number(inv.foundAmount || 0);
+      const piiCount = Number(inv.piiRedacted != null ? inv.piiRedacted : 1);
+      const safeSms = String(inv.smsText || 'Line-item audit completed.').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const safeFile = String(inv.folderPath || `clients/${slug}/incoming_invoices/inv_${inv.id}.jpg`);
+
+      return `
+        <div class="action-card" id="inv-card-${idx}">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span class="card-tag ${badgeClass}" style="margin:0;">${badgeLabel}</span>
+            <span style="font-size:11.5px; font-weight:700; color:var(--slate);">${inv.time || 'Recent Upload'}</span>
+          </div>
+          <h3 style="margin:4px 0 4px 0; font-size:15.5px;">${inv.vendor || 'Uploaded Delivery Invoice'}</h3>
+          <div style="font-size:12px; color:var(--slate); margin-bottom:8px;">
+            Invoice ID: <strong>${inv.id}</strong> &bull; Vault File: <code>${safeFile.split('/').pop()}</code>
+          </div>
+          <div class="sku-row" style="display:flex; justify-content:space-between; align-items:center;">
+            <span><strong>Profit Protected:</strong> <span style="font-size:11.5px; color:var(--slate);">(${piiCount} PII masked)</span></span>
+            <strong style="color:var(--emerald); font-size:15px;">+$${amt.toFixed(2)}/mo</strong>
+          </div>
+          <button type="button" class="quick-btn" style="margin-top:8px; background:#1e293b; font-size:12.5px; padding:8px 12px;" onclick="toggleInvoiceAuditDrawer(${idx})">
+            <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>View Audit Report
+          </button>
+          <div id="inv-drawer-${idx}" class="audit-drawer">${safeSms}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function toggleInvoiceAuditDrawer(idx) {
+    const drawer = document.getElementById(`inv-drawer-${idx}`);
+    if (drawer) {
+      drawer.classList.toggle('open');
+    }
+  }
+
+  function renderAccountInfo() {
+    const slug = document.getElementById('activeStoreSelect').value;
+    const feed = storeFeeds[slug] || storeFeeds.golden_gate_bakery_sample;
+
+    const bizEl = document.getElementById('accBizInput');
+    const ownerEl = document.getElementById('accOwnerInput');
+    const phoneEl = document.getElementById('accPhoneInput');
+    const posEl = document.getElementById('accPosSelect');
+    const tierEl = document.getElementById('accTierSelect');
+    const linkEl = document.getElementById('accMagicLinkText');
+
+    if (bizEl) bizEl.value = feed.name || '';
+    if (ownerEl) ownerEl.value = feed.owner || '';
+    if (phoneEl) phoneEl.value = feed.phone || '';
+    if (posEl && feed.pos_type) {
+      const matchPos = Array.from(posEl.options).find(o => o.value.indexOf(feed.pos_type.split(' ')[0]) !== -1);
+      if (matchPos) posEl.value = matchPos.value;
+    }
+    if (tierEl && feed.tier) {
+      const matchTier = Array.from(tierEl.options).find(o => o.value.indexOf(feed.tier.substring(0, 6)) !== -1);
+      if (matchTier) tierEl.value = matchTier.value;
+    }
+    if (linkEl) {
+      linkEl.textContent = `https://marginvaultai.com/snap.html?store=${encodeURIComponent(slug)}`;
+    }
+  }
+
+  function findStoreAccount() {
+    const input = document.getElementById('accountLookupInput');
+    const msgBox = document.getElementById('accountLookupMsg');
+    if (!input || !msgBox) return;
+
+    const query = input.value.trim();
+    if (!query) {
+      msgBox.style.display = 'block';
+      msgBox.style.background = '#fef2f2';
+      msgBox.style.color = '#b91c1c';
+      msgBox.textContent = 'Please enter your store phone number or business name.';
+      return;
+    }
+
+    loadSharedClientsFromLocalStorage();
+    const qDigits = query.replace(/\D/g, '');
+    const qLower = query.toLowerCase();
+
+    let matchedSlug = null;
+    for (const [slug, info] of Object.entries(storeFeeds)) {
+      const infoDigits = String(info.phone || '').replace(/\D/g, '');
+      const infoName = String(info.name || '').toLowerCase();
+      const infoOwner = String(info.owner || '').toLowerCase();
+      if (
+        (qDigits.length >= 4 && infoDigits.indexOf(qDigits) !== -1) ||
+        infoName.indexOf(qLower) !== -1 ||
+        slug.indexOf(qLower.replace(/[^a-z0-9]+/g, '_')) !== -1 ||
+        infoOwner.indexOf(qLower) !== -1
+      ) {
+        matchedSlug = slug;
+        break;
+      }
+    }
+
+    if (!matchedSlug) {
+      // Create & activate store profile on the fly if they typed their store name
+      const newSlug = query.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'custom_store';
+      matchedSlug = ensureStoreFeedEntry({
+        slug: newSlug,
+        biz: qDigits.length >= 7 ? `Store Vault (${query})` : query,
+        owner: "Store Owner",
+        phone: qDigits.length >= 7 ? query : "+14155550142"
+      });
+    }
+
+    const select = document.getElementById('activeStoreSelect');
+    if (select && matchedSlug) {
+      select.value = matchedSlug;
+      switchStore();
+    }
+
+    msgBox.style.display = 'block';
+    msgBox.style.background = '#d1fae5';
+    msgBox.style.color = '#065f46';
+    msgBox.textContent = `Loaded store account: ${storeFeeds[matchedSlug].name}`;
+
+    if (window.mvTelemetry) {
+      window.mvTelemetry.track('account_lookup', {
+        query: query,
+        matchedStore: matchedSlug
+      });
+    }
+  }
+
+  async function saveStoreAccountInfo() {
+    const slug = document.getElementById('activeStoreSelect').value;
+    const biz = (document.getElementById('accBizInput').value || '').trim() || 'My Store';
+    const owner = (document.getElementById('accOwnerInput').value || '').trim() || 'Store Owner';
+    const phone = (document.getElementById('accPhoneInput').value || '').trim() || '+14155550101';
+    const pos = document.getElementById('accPosSelect').value;
+    const tier = document.getElementById('accTierSelect').value;
+    const fee = tier.includes('199') ? 199 : (tier.includes('399') ? 399 : 699);
+
+    const updatedClient = {
+      slug: slug,
+      biz: biz,
+      owner: owner,
+      phone: phone,
+      pos: pos,
+      pos_type: pos,
+      tier: tier,
+      fee: fee,
+      autoSend: false
+    };
+
+    ensureStoreFeedEntry(updatedClient);
+
+    try {
+      const existing = JSON.parse(localStorage.getItem('mv_shared_clients') || '[]');
+      const filtered = existing.filter(c => c.slug !== slug);
+      filtered.unshift(updatedClient);
+      localStorage.setItem('mv_shared_clients', JSON.stringify(filtered));
+    } catch (e) {}
+
+    try {
+      await fetch('/api/public-signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedClient)
+      });
+    } catch (e) {}
+
+    if (window.mvTelemetry) {
+      window.mvTelemetry.track('account_info_saved', {
+        store: slug,
+        biz: biz,
+        pos: pos
+      });
+    }
+
+    renderStoreFeed();
+    renderAccountInfo();
+    renderUploadedInvoices();
+
+    const banner = document.getElementById('accSaveBanner');
+    if (banner) {
+      banner.style.display = 'block';
+      banner.textContent = `Account info saved for ${biz}!`;
+      setTimeout(() => { banner.style.display = 'none'; }, 3500);
+    }
+  }
+
+  function copyStoreMagicLink() {
+    const linkEl = document.getElementById('accMagicLinkText');
+    const text = linkEl ? linkEl.textContent : window.location.href;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    }
+    const banner = document.getElementById('accSaveBanner');
+    if (banner) {
+      banner.style.display = 'block';
+      banner.textContent = 'Direct store link copied to clipboard!';
+      setTimeout(() => { banner.style.display = 'none'; }, 3000);
+    }
   }
 
   function switchPane(paneId, btn) {
     document.querySelectorAll('.view-pane').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-    document.getElementById(paneId).classList.add('active');
-    btn.classList.add('active');
+    const targetPane = document.getElementById(paneId);
+    if (targetPane) targetPane.classList.add('active');
+    if (btn) btn.classList.add('active');
+    if (paneId === 'pane-invoices') renderUploadedInvoices();
+    if (paneId === 'pane-score') renderAccountInfo();
+  }
+
+  function switchPaneById(paneId) {
+    const btnMap = {
+      'pane-snap': document.getElementById('navBtnSnap'),
+      'pane-invoices': document.getElementById('navBtnInvoices'),
+      'pane-bake': document.getElementById('navBtnBake'),
+      'pane-score': document.getElementById('navBtnAccount')
+    };
+    switchPane(paneId, btnMap[paneId] || null);
   }
 
   initStoreFromUrl();

@@ -2,7 +2,7 @@
  * MarginVault AI Service Worker (sw.js)
  * Implements Network-First caching with Offline Walk-In Cooler fallback and Background Sync.
  */
-const CACHE_NAME = 'marginvault-shell-v6';
+const CACHE_NAME = 'marginvault-shell-v7';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
