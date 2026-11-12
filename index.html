@@ -1292,6 +1292,9 @@
           <label style="display:block; font-size:13px; font-weight:700; margin-bottom:4px;">Owner Mobile Phone Number (For Weekly Found-Money SMS Alerts)</label>
           <input id="suPhone" type="tel" required placeholder="(415) 555-0199" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:12px; box-sizing:border-box;">
 
+          <label style="display:block; font-size:13px; font-weight:700; margin-bottom:4px;" for="suPin">4-Digit Store Vault PIN (Protects Your Uploaded Invoices &amp; Account)</label>
+          <input id="suPin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="new-password" required placeholder="Create 4-Digit Store PIN (e.g., 4829)" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:12px; box-sizing:border-box;">
+
           <label style="display:block; font-size:13px; font-weight:700; margin-bottom:4px;">Current POS &amp; Register System</label>
           <select id="suPos" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:12px; box-sizing:border-box;">
             <option value="Liquor/Grocery Barcode Scanner (NRG/Verifone/Clover)">Corner / Liquor Store Barcode Scanner (NRG / Verifone / Clover)</option>
@@ -1442,18 +1445,47 @@
     }
   }
 
+  async function hashClientStorePin(pin, phone) {
+    const cleanDigits = String(phone || '').replace(/\D/g, '');
+    const msg = `mv_client_pin_v2::${cleanDigits}::${String(pin || '').trim()}`;
+    if (window.crypto && window.crypto.subtle && window.TextEncoder) {
+      try {
+        const buf = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+      } catch (err) {}
+    }
+    let h = 2166136261;
+    for (let i = 0; i < msg.length; i++) {
+      h ^= msg.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    return h.toString(16).padStart(8, '0');
+  }
+
   async function submitSignup(e) {
     e.preventDefault();
     const name = document.getElementById('suName').value.trim();
     const store = document.getElementById('suStore').value.trim();
     const phone = document.getElementById('suPhone').value.trim();
+    const pinEl = document.getElementById('suPin');
+    const storePin = pinEl ? pinEl.value.trim() : '';
     const pos = document.getElementById('suPos').value;
     const plan = document.getElementById('suPlan').value;
+    const confirmBox = document.getElementById('suConfirm');
 
-    const slug = store.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'custom_store';
+    if (!/^\d{4,8}$/.test(storePin)) {
+      confirmBox.style.display = 'block';
+      confirmBox.style.background = '#fef2f2';
+      confirmBox.style.border = '1.5px solid #ef4444';
+      confirmBox.style.color = '#991b1b';
+      confirmBox.textContent = 'Please enter a 4-to-8 digit numeric Store Vault PIN to protect your uploaded invoices.';
+      return;
+    }
+
+    let slug = store.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'custom_store';
     const fee = plan.includes('199') ? 199 : (plan.includes('399') ? 399 : 699);
 
-    const newClient = {
+    const signupPayload = {
       phone: phone,
       slug: slug,
       biz: store,
@@ -1462,32 +1494,63 @@
       fee: fee,
       pos: pos,
       pos_type: pos,
+      storePin: storePin,
       autoSend: false
     };
 
-    // 1. Save into localStorage under mv_shared_clients so snap.html & admin.html sync immediately
-    try {
-      const existing = JSON.parse(localStorage.getItem('mv_shared_clients') || '[]');
-      const filtered = existing.filter(c => c.slug !== slug && c.phone !== phone);
-      filtered.unshift(newClient);
-      localStorage.setItem('mv_shared_clients', JSON.stringify(filtered));
-      localStorage.setItem('mv_active_store', slug);
-    } catch (err) {}
-
-    // 2. Sync with cloud_app.py / backend if online
+    // 1. Sync with cloud_app.py / backend first so duplicate phone overwrites (409) are blocked
     let cloudSynced = false;
+    let accessToken = null;
     try {
       const resp = await fetch('/api/public-signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newClient)
+        body: JSON.stringify(signupPayload)
       });
+      if (resp.status === 409) {
+        const dupData = await resp.json().catch(() => ({}));
+        confirmBox.style.display = 'block';
+        confirmBox.style.background = '#fffbeb';
+        confirmBox.style.border = '1.5px solid #f59e0b';
+        confirmBox.style.color = '#92400e';
+        confirmBox.innerHTML = `
+          <strong><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Phone Already Protected by Store Vault PIN</strong><br>
+          ${dupData.error || 'This mobile number already has a registered MarginVault store account.'}<br>
+          <a href="snap.html?pane=account" class="btn-primary" style="display:block; text-align:center; margin-top:10px; padding:10px 14px; font-size:14px;">
+            Unlock Store Account
+          </a>
+        `;
+        return;
+      }
       if (resp.ok) {
+        const respData = await resp.json();
         cloudSynced = true;
+        if (respData.slug) slug = respData.slug;
+        if (respData.access_token) accessToken = respData.access_token;
       }
     } catch (err) {
-      console.warn('Backend sync deferred (offline/local mode):', err);
+      console.warn('Backend sync deferred (offline/static mode):', err);
     }
+
+    // 2. Store strictly single-tenant session state in sessionStorage (zero multi-tenant localStorage leakage)
+    try {
+      const pinDigest = await hashClientStorePin(storePin, phone);
+      const scopedSession = {
+        slug: slug,
+        biz: store,
+        owner: name,
+        phone: phone,
+        pos_type: pos,
+        tier: plan,
+        fee: fee,
+        pinDigest: pinDigest,
+        access_token: accessToken,
+        unlocked: true
+      };
+      sessionStorage.setItem('mv_store_session_' + slug, JSON.stringify(scopedSession));
+      sessionStorage.setItem('mv_active_store', slug);
+      localStorage.removeItem('mv_shared_clients');
+    } catch (err) {}
 
     if (window.mvTelemetry) {
       window.mvTelemetry.track('public_signup', {
@@ -1499,6 +1562,11 @@
         cloudSynced: cloudSynced
       });
     }
+
+    const tokenQs = accessToken
+      ? `&exp=${encodeURIComponent(accessToken.exp)}&nonce=${encodeURIComponent(accessToken.nonce)}&sig=${encodeURIComponent(accessToken.sig)}`
+      : '';
+    const snapHref = `snap.html?store=${encodeURIComponent(slug)}${tokenQs}`;
 
     const subject = encodeURIComponent(`Founding Store Pilot Activation — ${store}`);
     const body = encodeURIComponent(
@@ -1513,22 +1581,22 @@ Please activate our Free 14-Day Founding Store Pilot:
 - Instant 1-Tap Store Camera App: snap.html?store=${slug}`
     );
 
-    const confirmBox = document.getElementById('suConfirm');
     confirmBox.style.display = 'block';
     confirmBox.style.background = cloudSynced ? '#ecfdf5' : '#fffbeb';
     confirmBox.style.border = cloudSynced ? '1.5px solid #10b981' : '1.5px solid #f59e0b';
+    confirmBox.style.color = '#065f46';
     confirmBox.innerHTML = `
-      <strong><svg class="mv-icon" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>Pilot Vault Reserved for ${store}!</strong><br>
-      Your zero-login store vault (<code>clients/${slug}/</code>) is active right now. Snap your first delivery invoice immediately with zero passwords or texting wait:<br>
-      ${!cloudSynced ? '<div style="margin:6px 0; font-size:12px; color:#b45309; background:#fef3c7; padding:6px 10px; border-radius:6px; border:1px solid #fde68a;"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Offline Mode: Vault profile saved to browser storage. Automatic cloud synchronization will occur when connected.</div>' : ''}
-      <a id="suInstantSnapBtn" href="snap.html?store=${encodeURIComponent(slug)}" class="btn-primary" style="display:block; text-align:center; margin-top:10px; padding:12px 16px; font-size:14.5px;">
+      <strong><svg class="mv-icon" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>PIN-Protected Vault Active for ${store}!</strong><br>
+      Your private store vault (<code>clients/${slug}/</code>) is locked with your Store Vault PIN. Snap your first delivery invoice immediately:<br>
+      ${!cloudSynced ? '<div style="margin:6px 0; font-size:12px; color:#b45309; background:#fef3c7; padding:6px 10px; border-radius:6px; border:1px solid #fde68a;"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Offline Session Mode: Private store profile saved to your active browser session.</div>' : ''}
+      <a id="suInstantSnapBtn" href="${snapHref}" class="btn-primary" style="display:block; text-align:center; margin-top:10px; padding:12px 16px; font-size:14.5px;">
         <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>Open Invoice Camera
       </a>
       <div style="display:flex; gap:8px; margin-top:8px;">
-        <a href="snap.html?store=${encodeURIComponent(slug)}&pane=invoices" style="flex:1; text-align:center; padding:9px 10px; background:#0f172a; color:#ffffff; border-radius:8px; font-weight:700; font-size:12.5px;">
+        <a href="${snapHref}&pane=invoices" style="flex:1; text-align:center; padding:9px 10px; background:#0f172a; color:#ffffff; border-radius:8px; font-weight:700; font-size:12.5px;">
           <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>View My Invoices
         </a>
-        <a href="snap.html?store=${encodeURIComponent(slug)}&pane=account" style="flex:1; text-align:center; padding:9px 10px; background:#ffffff; color:#065f46; border:1.5px solid #10b981; border-radius:8px; font-weight:700; font-size:12.5px;">
+        <a href="${snapHref}&pane=account" style="flex:1; text-align:center; padding:9px 10px; background:#ffffff; color:#065f46; border:1.5px solid #10b981; border-radius:8px; font-weight:700; font-size:12.5px;">
           <svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>View Store Account
         </a>
       </div>

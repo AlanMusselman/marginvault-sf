@@ -2,7 +2,7 @@
  * MarginVault AI Service Worker (sw.js)
  * Implements Network-First caching with Offline Walk-In Cooler fallback and Background Sync.
  */
-const CACHE_NAME = 'marginvault-shell-v7';
+const CACHE_NAME = 'marginvault-shell-v8';
 const SHELL_ASSETS = [
   '/',
   '/index.html',
@@ -44,12 +44,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // 1. Bypass Service Worker cache for API mutation endpoints
-  if (url.pathname.startsWith('/api/')) {
+  // 1. Bypass Service Worker cache for API and Webhook mutation endpoints
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/webhooks/')) {
     return;
   }
 
-  // 2. Network-First Strategy (always serves fresh live updates when online, falls back to cache in walk-in coolers)
+  // 2. Network-First Strategy (always serves fresh live updates when online, falls back to route-aware cache in walk-in coolers)
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
@@ -63,6 +63,18 @@ self.addEventListener('fetch', (event) => {
         return caches.match(event.request).then((cachedResponse) => {
           if (cachedResponse) return cachedResponse;
           if (event.request.mode === 'navigate') {
+            if (url.pathname.startsWith('/admin')) {
+              return new Response(
+                'Offline Mode: MarginVault Founder Admin requires an active encrypted cloud session.',
+                { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } }
+              );
+            }
+            if (url.pathname.startsWith('/gatekeeper')) {
+              return caches.match('/gatekeeper.html');
+            }
+            if (url.pathname === '/' || url.pathname.startsWith('/index')) {
+              return caches.match('/index.html');
+            }
             return caches.match('/snap.html');
           }
         });
@@ -108,6 +120,8 @@ async function flushIndexedDBQueue() {
             item.status = 'SYNCED';
             item.syncedAt = Date.now();
             item.serverAudit = data;
+            delete item.base64Image;
+            item.imagePruned = true;
             uStore.put(item);
 
             // Notify open browser tabs of sync success
@@ -120,6 +134,20 @@ async function flushIndexedDBQueue() {
                 audit: data.audit_report
               });
             }
+          } else {
+            // SEC-P2-03: Dead-Letter Queue (DLQ) & max-attempts cap so poison 4xx records never loop infinitely
+            const updateTx = db.transaction('offline_invoices', 'readwrite');
+            const uStore = updateTx.objectStore('offline_invoices');
+            item.attempts = (item.attempts || 0) + 1;
+            item.lastError = 'HTTP ' + resp.status;
+            const isPermanentClientError = resp.status >= 400 && resp.status < 500 && resp.status !== 429;
+            if (isPermanentClientError || item.attempts >= 3) {
+              item.status = 'FAILED_DLQ';
+              item.failedAt = Date.now();
+              delete item.base64Image;
+              item.imagePruned = true;
+            }
+            uStore.put(item);
           }
         } catch (e) {
           // Connection still spotty; retry on next event

@@ -877,15 +877,14 @@
   <div class="lock-card">
     <svg class="mv-icon-hero" width="40" height="40" viewBox="0 0 24 24" stroke="#34d399" stroke-width="1.75" fill="none" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     <h2>Margin<span style="color:#34d399;">Vault</span> AI — Founder Lock</h2>
-    <p>Protected San Francisco Command Center (`admin.html`). Enter your Founder Passcode or Email to unlock:</p>
-    <div id="lockErrorBox" class="lock-error">Invalid passcode. Use your Founder PIN (`vault2026`) or email (`runnerman12@gmail.com`).</div>
+    <p>Protected San Francisco Command Center (<code>admin.html</code>). Enter your Founder Passcode to issue a signed admin session token:</p>
+    <div id="lockErrorBox" class="lock-error">Invalid Founder Passcode. Unauthorized attempt logged.</div>
     <form onsubmit="unlockFounderAdmin(event)">
-      <input type="password" id="founderPasscodeInput" class="lock-input" placeholder="Enter Founder PIN or Email..." autocomplete="current-password" required>
+      <input type="password" id="founderPasscodeInput" class="lock-input" placeholder="Enter Founder Passcode..." autocomplete="current-password" required>
       <button type="submit" class="btn btn-emerald" style="width:100%; justify-content:center; padding:12px; font-size:14.5px;"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>Unlock Founder Admin</button>
     </form>
     <div style="margin-top:14px; font-size:12px; color:#64748b;">
-      Default Founder PIN: <code style="color:#38bdf8; cursor:pointer;" onclick="document.getElementById('founderPasscodeInput').value='vault2026'">vault2026</code> &bull;
-      Session-protected via <code>sessionStorage</code>
+      Verified via <code>POST /api/admin-auth</code> &bull; Signed HMAC Token in <code>sessionStorage</code>
     </div>
   </div>
 </div>
@@ -897,7 +896,7 @@
     <span class="badge-admin">Founder Web Admin Command Center</span>
   </div>
   <div class="top-actions">
-    <span><span class="status-dot"></span>24/7 Cloud DB &amp; PII Firewall: <strong id="cloudStatusText">ONLINE</strong></span>
+    <span><span class="status-dot"></span>24/7 Cloud DB &amp; PII Firewall: <strong id="cloudStatusText">LOCKED</strong></span>
     <span>|</span>
     <span>Cloud AI Spend: <strong style="color:#34d399;">$0.04 / $10.00 Cap</strong></span>
     <button onclick="downloadCloudBackup()" class="btn btn-navy" style="cursor:pointer;"><svg class="mv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download Cloud Backup</button>
@@ -907,7 +906,7 @@
   </div>
 </header>
 
-<div class="container">
+<div id="adminProtectedContainer" class="container" style="display:none;" aria-hidden="true">
   <div id="toastBanner" class="toast-banner"></div>
 
   <!-- KPI SUMMARY BAR -->
@@ -1260,53 +1259,118 @@ SKU-102 Sweet Cream Butter (36-lb) — 8 cases @ $74.25/cs (Previous baseline: $
 
 <script>
   // ============================================================================
-  // FEATURE A: FOUNDER PASSCODE / SECURITY LOCK SCREEN LOGIC
+  // FEATURE A: FOUNDER PASSCODE / SERVER-VERIFIED SESSION AUTH LOGIC
   // ============================================================================
-  const ALLOWED_FOUNDER_PASSCODES = new Set([
-    'vault2026',
-    'runnerman12@gmail.com',
-    'sf-vault-admin',
-    'alan2026'
-  ]);
+  const OFFLINE_DEMO_SALT = 'mv_founder_salt_v2::';
+  const OFFLINE_DEMO_SHA256 = '6cf4daf7d080a4aa44936eadba0be3623d97a979d5ce170cc5d45790912bcac6';
+
+  function isFounderAuthenticated() {
+    return sessionStorage.getItem('mv_founder_unlocked') === 'true' && Boolean(sessionStorage.getItem('mv_admin_token'));
+  }
+
+  function getAdminAuthHeaders(includeJson = true) {
+    const hdrs = {};
+    if (includeJson) hdrs['Content-Type'] = 'application/json';
+    const tok = sessionStorage.getItem('mv_admin_token') || '';
+    if (tok) hdrs['Authorization'] = 'Bearer ' + tok;
+    return hdrs;
+  }
+
+  async function computeSha256Hex(str) {
+    if (!window.crypto || !window.crypto.subtle || typeof TextEncoder === 'undefined') return '';
+    const buf = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
 
   function checkFounderLockState() {
-    const unlocked = sessionStorage.getItem('mv_founder_unlocked') === 'true';
+    const unlocked = isFounderAuthenticated();
     const overlay = document.getElementById('founderLockOverlay');
+    const shell = document.getElementById('adminProtectedContainer');
     if (unlocked) {
       overlay.classList.add('hidden');
+      if (shell) {
+        shell.style.display = 'block';
+        shell.setAttribute('aria-hidden', 'false');
+      }
     } else {
       overlay.classList.remove('hidden');
+      if (shell) {
+        shell.style.display = 'none';
+        shell.setAttribute('aria-hidden', 'true');
+      }
     }
   }
 
-  function unlockFounderAdmin(e) {
+  async function unlockFounderAdmin(e) {
     if (e) e.preventDefault();
     const inputEl = document.getElementById('founderPasscodeInput');
     const errBox = document.getElementById('lockErrorBox');
-    const val = (inputEl.value || '').trim().toLowerCase();
+    const rawVal = (inputEl.value || '').trim();
+    if (!rawVal) return;
 
-    if (ALLOWED_FOUNDER_PASSCODES.has(val)) {
+    let authSuccess = false;
+    let issuedToken = '';
+
+    // 1. Primary server-side authentication via POST /api/admin-auth
+    try {
+      const resp = await fetch('/api/admin-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode: rawVal })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && data.ok && data.token) {
+          authSuccess = true;
+          issuedToken = data.token;
+        }
+      } else if (resp.status === 404 || resp.status === 405) {
+        // Static GitHub Pages preview mode: verify salted SHA-256 digest locally
+        const digest = await computeSha256Hex(OFFLINE_DEMO_SALT + rawVal.toLowerCase());
+        if (digest && digest === OFFLINE_DEMO_SHA256) {
+          authSuccess = true;
+          issuedToken = 'offline_static_demo_session';
+        }
+      }
+    } catch (netErr) {
+      // Offline / file:// fallback: verify salted SHA-256 digest locally
+      const digest = await computeSha256Hex(OFFLINE_DEMO_SALT + rawVal.toLowerCase());
+      if (digest && digest === OFFLINE_DEMO_SHA256) {
+        authSuccess = true;
+        issuedToken = 'offline_static_demo_session';
+      }
+    }
+
+    if (authSuccess) {
+      sessionStorage.setItem('mv_admin_token', issuedToken);
       sessionStorage.setItem('mv_founder_unlocked', 'true');
       errBox.style.display = 'none';
       inputEl.value = '';
       checkFounderLockState();
       if (window.mvTelemetry) {
-        window.mvTelemetry.track('admin_unlock_attempt', { success: true, method: 'pin_or_email' });
+        window.mvTelemetry.track('admin_unlock_attempt', { success: true, method: 'hmac_session' });
       }
-      showToast('[Unlocked] Founder Admin Command Center unlocked for this browser session.');
-      if (typeof fetchAndRenderTelemetry === 'function') {
-        fetchAndRenderTelemetry(currentTelemetryRange);
-      }
+      showToast('[Unlocked] Founder Admin Command Center unlocked with signed session token.');
+      await syncWithCloudBackend();
     } else {
       errBox.style.display = 'block';
       if (window.mvTelemetry) {
-        window.mvTelemetry.track('admin_unlock_attempt', { success: false, method: 'pin_or_email' });
+        window.mvTelemetry.track('admin_unlock_attempt', { success: false, method: 'hmac_session' });
       }
     }
   }
 
   function lockFounderAdmin() {
     sessionStorage.removeItem('mv_founder_unlocked');
+    sessionStorage.removeItem('mv_admin_token');
+    sessionStorage.removeItem('mv_admin_session_clients');
+    sessionStorage.removeItem('mv_admin_session_queue');
+    ['clientTableBody', 'mmsQueueContainer', 'posBaselineTableBody', 'telemetryEventsTableBody'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '';
+    });
+    const stText = document.getElementById('cloudStatusText');
+    if (stText) stText.textContent = 'LOCKED';
     checkFounderLockState();
     if (window.mvTelemetry) {
       window.mvTelemetry.track('admin_lock_console', { action: 'lock' });
@@ -1502,15 +1566,17 @@ ${item.biz}
   }
 
   function saveSharedStateToLocalStorage() {
+    if (!isFounderAuthenticated()) return;
     try {
-      localStorage.setItem('mv_shared_clients', JSON.stringify(clients));
-      localStorage.setItem('mv_shared_mms_queue', JSON.stringify(mmsQueue));
+      sessionStorage.setItem('mv_admin_session_clients', JSON.stringify(clients));
+      sessionStorage.setItem('mv_admin_session_queue', JSON.stringify(mmsQueue));
     } catch (e) {}
   }
 
   function loadSharedStateFromLocalStorage() {
+    if (!isFounderAuthenticated()) return;
     try {
-      const rawClients = localStorage.getItem('mv_shared_clients');
+      const rawClients = sessionStorage.getItem('mv_admin_session_clients');
       if (rawClients) {
         const parsedClients = JSON.parse(rawClients);
         if (Array.isArray(parsedClients) && parsedClients.length > 0) {
@@ -1523,7 +1589,7 @@ ${item.biz}
           clients = merged;
         }
       }
-      const rawQueue = localStorage.getItem('mv_shared_mms_queue');
+      const rawQueue = sessionStorage.getItem('mv_admin_session_queue');
       if (rawQueue) {
         const parsedQueue = JSON.parse(rawQueue);
         if (Array.isArray(parsedQueue) && parsedQueue.length > 0) {
@@ -1532,19 +1598,12 @@ ${item.biz}
             if (!existing) {
               mmsQueue.unshift(item);
             } else {
-              // Propagate status updates (e.g. PENDING_APPROVAL -> SENT)
               if (item.status === 'SENT' || (existing.status !== 'SENT' && item.status)) {
                 existing.status = item.status;
               }
               if (item.smsText) existing.smsText = item.smsText;
               if (item.foundAmount != null && item.foundAmount > 0) existing.foundAmount = item.foundAmount;
               if (item.vendor) existing.vendor = item.vendor;
-            }
-          });
-          mmsQueue.forEach(existing => {
-            const inParsed = parsedQueue.find(p => p.id === existing.id);
-            if (inParsed && existing.status === 'SENT') {
-              inParsed.status = 'SENT';
             }
           });
         }
@@ -1615,6 +1674,7 @@ ${item.biz}
   }
 
   async function sendSingleSms(idx) {
+    if (!isFounderAuthenticated()) return;
     const editedText = document.getElementById(`smsEdit_${idx}`).value;
     mmsQueue[idx].smsText = editedText;
     mmsQueue[idx].status = 'SENT';
@@ -1623,7 +1683,7 @@ ${item.biz}
     try {
       await fetch('/api/approve-sms', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminAuthHeaders(),
         body: JSON.stringify({ id: mmsQueue[idx].id, smsText: editedText })
       });
     } catch (e) {}
@@ -1631,6 +1691,7 @@ ${item.biz}
   }
 
   async function approveAllSms() {
+    if (!isFounderAuthenticated()) return;
     let count = 0;
     mmsQueue.forEach(m => {
       if (m.status !== 'SENT') {
@@ -1643,7 +1704,7 @@ ${item.biz}
     try {
       await fetch('/api/approve-sms', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminAuthHeaders(),
         body: JSON.stringify({ id: 'ALL' })
       });
     } catch (e) {}
@@ -1716,19 +1777,20 @@ ${item.biz}
   }
 
   async function savePosBaselineFromEditor() {
+    if (!isFounderAuthenticated()) return;
     const slug = document.getElementById('posStoreSelect').value;
     const csvText = document.getElementById('posBaselineCsvEditor').value.trim();
     if (!slug || !csvText) return;
     storePosBaselines[slug] = csvText;
     try {
-      localStorage.setItem('mv_pos_baselines', JSON.stringify(storePosBaselines));
+      sessionStorage.setItem('mv_pos_baselines', JSON.stringify(storePosBaselines));
     } catch (e) {}
     renderPosBaselineViewer();
 
     try {
       await fetch('/api/save-pos-baseline', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminAuthHeaders(),
         body: JSON.stringify({ slug, csvText })
       });
     } catch (e) {}
@@ -1838,7 +1900,7 @@ ${item.biz}
     try {
       await fetch('/api/add-client', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminAuthHeaders(),
         body: JSON.stringify({ phone, biz, owner, tier, autoSend })
       });
     } catch (err) {}
@@ -1933,7 +1995,7 @@ ${item.biz}
     else if (/reyes|golden\s+brands/i.test(scrubbedText)) vendorName = "Reyes Beer Division";
     else if (/core[\s-]*mark/i.test(scrubbedText)) vendorName = "Core-Mark International";
 
-    const invMatch = scrubbedText.match(/(?:invoice|inv|ticket)\s*(?:no\.?|num|#|:)?\s*([A-Z0-9-]{3,14})/i);
+    const invMatch = scrubbedText.match(/\b(?:invoice|inv|ticket|bill)(?:\s+(?:number|no\.?|num\.?))?(?:\s*[#:]+\s*|\s+)(?=[A-Z0-9-]*\d)([A-Z0-9-]{3,18})\b/i);
     const invNum = invMatch ? `#${invMatch[1].replace(/^#/, '')}` : "";
 
     // 4. Parse each invoice line dynamically using the actual numbers in `#simText`
@@ -2160,7 +2222,7 @@ ${smsBullets.join('\n')}`;
     try {
       await fetch('/api/simulate-mms', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAdminAuthHeaders(),
         body: JSON.stringify({
           phone: client.phone,
           rawText: rawText,
@@ -2174,13 +2236,23 @@ ${smsBullets.join('\n')}`;
     showToast(`[Audited] Dynamically audited ${newMsgId} (+$${audit.totalProtected.toFixed(2)} protected) for ${client.biz}!`);
   }
 
-  function downloadCloudBackup() {
-    const payload = {
-      exported_at: new Date().toISOString(),
-      clients: clients,
-      storePosBaselines: storePosBaselines,
-      mmsQueue: mmsQueue
-    };
+  async function downloadCloudBackup() {
+    if (!isFounderAuthenticated()) return;
+    let payload = null;
+    try {
+      const resp = await fetch('/api/backup', { headers: getAdminAuthHeaders(false) });
+      if (resp.ok) {
+        payload = await resp.json();
+      }
+    } catch (e) {}
+    if (!payload) {
+      payload = {
+        exported_at: new Date().toISOString(),
+        clients: clients,
+        storePosBaselines: storePosBaselines,
+        mmsQueue: mmsQueue
+      };
+    }
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -2595,21 +2667,24 @@ ${smsBullets.join('\n')}`;
     showToast('[Cleared] Local telemetry events and errors reset.');
   }
 
-  // Try connecting to live cloud_app.py API (/api/state), fallback to localStorage + embedded state
+  // Connect to live cloud_app.py API (/api/state) ONLY when authenticated
   async function syncWithCloudBackend() {
+    if (!isFounderAuthenticated()) return;
     try {
-      const savedBaselines = localStorage.getItem('mv_pos_baselines');
+      const savedBaselines = sessionStorage.getItem('mv_pos_baselines');
       if (savedBaselines) {
         Object.assign(storePosBaselines, JSON.parse(savedBaselines));
       }
     } catch (e) {}
 
-    // 1. Load & merge shared localStorage state from index.html & snap.html
     loadSharedStateFromLocalStorage();
 
-    // 2. Also sync with cloud_app.py if running online
     try {
-      const resp = await fetch('/api/state');
+      const resp = await fetch('/api/state', { headers: getAdminAuthHeaders(false) });
+      if (resp.status === 401 || resp.status === 403) {
+        lockFounderAdmin();
+        return;
+      }
       if (resp.ok) {
         const data = await resp.json();
         if (data.clients && data.clients.length) {
@@ -2625,7 +2700,6 @@ ${smsBullets.join('\n')}`;
             if (!existing) {
               mmsQueue.unshift(sm);
             } else {
-              // Ensure status updates (PENDING_APPROVAL -> SENT) propagate
               if (sm.status && sm.status !== existing.status) {
                 existing.status = sm.status;
               }
@@ -2646,29 +2720,25 @@ ${smsBullets.join('\n')}`;
       }
     } catch (err) {
       // Running directly via file:// or static hosting
+      document.getElementById('cloudStatusText').textContent = 'OFFLINE DEMO SESSION';
     }
     renderClients();
     renderMmsQueue();
     fetchAndRenderTelemetry(currentTelemetryRange);
   }
 
-  // Listen for live cross-tab updates from snap.html or index.html
   window.addEventListener('storage', (e) => {
-    if (e.key === 'mv_shared_clients' || e.key === 'mv_shared_mms_queue' || e.key === 'mv_pos_baselines') {
-      loadSharedStateFromLocalStorage();
-      renderClients();
-      renderMmsQueue();
-      showToast('[Live Sync] Updated from Client 1-Tap Snap App / Public Signup!');
-    }
+    if (!isFounderAuthenticated()) return;
     if (e.key === 'mv_telemetry_events' || e.key === 'mv_telemetry_errors') {
       fetchAndRenderTelemetry(currentTelemetryRange);
     }
   });
 
-  // Initialize on load
+  // Initialize on load: only fetch or render sensitive data after Founder session auth succeeds
   checkFounderLockState();
-  syncWithCloudBackend();
-  fetchAndRenderTelemetry(currentTelemetryRange);
+  if (isFounderAuthenticated()) {
+    syncWithCloudBackend();
+  }
 </script>
 </body>
 </html>
